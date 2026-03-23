@@ -20,7 +20,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        syne: ['Syne', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
       },
       backgroundImage: {
         'gold-gradient': 'linear-gradient(135deg, #C9A84C 0%, #E2C97E 50%, #A07830 100%)',

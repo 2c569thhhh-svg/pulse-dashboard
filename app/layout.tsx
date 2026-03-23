@@ -13,11 +13,7 @@ export const metadata: Metadata = {
   description: 'AI-powered music publishing lead discovery and outreach platform',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={syne.className}>{children}</body>
