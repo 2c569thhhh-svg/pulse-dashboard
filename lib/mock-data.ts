@@ -90,7 +90,7 @@ export const mockProducers: Producer[] = [
     created_at: '2024-01-19T10:00:00Z',
     writer_name: 'JetsonMade',
     ipi_number: '00293847561',
-    pro: 'ASCAP',
+    pro: 'BMI',
     publisher_status: 'NO_PUBLISHER',
     outreach_status: 'OPENED',
     ai_score: 82,
@@ -102,7 +102,7 @@ export const mockProducers: Producer[] = [
     spotify_streams: 7800000,
     catalog_count: 31,
     associated_artists: ['Lil Baby', '21 Savage', 'Gunna'],
-    top_song: 'Sold Out Dates',
+    top_song: 'Woah',
     reasoning: 'Deep catalog with major artist placements — high lifetime royalty value',
     notes: 'Opened email twice — follow up',
   },
@@ -132,7 +132,7 @@ export const mockProducers: Producer[] = [
     created_at: '2024-01-21T10:00:00Z',
     writer_name: 'Wheezy',
     ipi_number: '00192837465',
-    pro: 'ASCAP',
+    pro: 'BMI',
     publisher_status: 'NO_PUBLISHER',
     outreach_status: 'REPLIED',
     ai_score: 95,
@@ -244,14 +244,14 @@ export const mockEmails: OutreachEmail[] = [
     id: '1',
     created_at: '2024-01-20T10:00:00Z',
     producer_id: '5',
-    subject: 'Your beat on "Sold Out Dates" — $3,500/mo uncollected',
+    subject: 'Your beat on "Woah" — $3,500/mo uncollected',
     body: `Hey JetsonMade,
 
-Quick question — are you collecting your full publishing royalties on "Sold Out Dates"?
+Quick question — are you collecting your full publishing royalties on "Woah"?
 
 I run Reyes Music, a publishing admin company. We pulled your IPI and you have no publisher on record — which means every time that song plays on Spotify, Apple Music, YouTube, or gets licensed, you're only collecting writer's share. The publisher's share is just... gone.
 
-On a song with 7.8M streams, we're talking roughly $3,500/month you're leaving on the table. Every month.
+On a song pulling 7.8M+ streams, we're estimating roughly $3,500/month in uncollected publisher's share — across streaming, YouTube Content ID, radio performance, and international digital. Every month.
 
 We do admin deals — no upfront cost, you keep your masters, you keep creative control. We handle all the backend: PRO registration, international collections, sync licensing, YouTube ContentID. Standard 15% admin fee, only on what we collect.
 
@@ -275,9 +275,9 @@ Miami, FL`,
     subject: 'Your beat on "Drip Too Hard" — $9,200/mo uncollected',
     body: `Hey Wheezy,
 
-"Drip Too Hard" is at 18.5M streams and climbing. Your IPI shows no publisher on record.
+"Drip Too Hard" is pulling massive numbers — and your IPI shows no publisher on record.
 
-You're collecting writer's share. The publisher's share — an equal split — is uncollected. On a song this size, that's roughly $9,200 every month.
+You're collecting writer's share. The publisher's share — an equal split — is uncollected. Across Spotify, Apple Music, Amazon, YouTube Content ID, radio performance, and international digital royalties, that's roughly $9,200 every month sitting on the table.
 
 Reyes Music does publishing admin. No upfront cost. You keep everything. We just collect what's already yours.
 

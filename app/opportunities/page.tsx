@@ -59,7 +59,7 @@ export default function OpportunitiesPage() {
               cursor: 'pointer',
               fontSize: 13,
               fontWeight: 600,
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               background: activeTab === tab ? 'rgba(201,168,76,0.15)' : 'transparent',
               color: activeTab === tab ? '#C9A84C' : 'var(--text-secondary)',
               textTransform: 'capitalize',
@@ -176,7 +176,7 @@ export default function OpportunitiesPage() {
                 <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
                   TARGET ARTIST
                 </label>
-                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif' }}>
+                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
                   {targetArtists.map(a => <option key={a.name}>{a.name}</option>)}
                 </select>
               </div>
@@ -184,7 +184,7 @@ export default function OpportunitiesPage() {
                 <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
                   GENRE FILTER
                 </label>
-                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif' }}>
+                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
                   <option>All Genres</option>
                   <option>Drill</option>
                   <option>Trap</option>

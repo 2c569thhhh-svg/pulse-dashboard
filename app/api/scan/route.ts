@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { artist, songs, leads } = await scanArtistForLeads(artistName)
+    const { artist, songs, leads, writersFound } = await scanArtistForLeads(artistName)
 
     // Insert leads into producers table
     for (const lead of leads) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         status: 'COMPLETED',
         completed_at: new Date().toISOString(),
         songs_scanned: songs.length,
-        writers_found: songs.length * 2, // approximate
+        writers_found: writersFound,
         leads_found: leads.length,
       })
       .eq('id', job.id)
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       success: true,
       artist: artist.name,
       songsScanned: songs.length,
+      writersFound,
       leadsFound: leads.length,
       leads,
     })

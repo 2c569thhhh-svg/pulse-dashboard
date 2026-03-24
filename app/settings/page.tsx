@@ -105,7 +105,7 @@ export default function SettingsPage() {
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
-                      fontFamily: 'Syne, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       textTransform: 'capitalize',
                     }}
                   >
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                 value={minStreams}
                 onChange={e => setMinStreams(e.target.value)}
                 type="number"
-                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none' }}
+                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none' }}
               />
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                 Only flag songs with {parseInt(minStreams).toLocaleString()}+ streams
@@ -140,7 +140,7 @@ export default function SettingsPage() {
                 type="number"
                 min="0"
                 max="100"
-                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none' }}
+                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none' }}
               />
             </div>
 
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  fontFamily: 'Syne, sans-serif',
+                  fontFamily: 'Inter, sans-serif',
                 }}
               >
                 {genre}

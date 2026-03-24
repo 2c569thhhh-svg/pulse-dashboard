@@ -15,7 +15,7 @@ export default function OutreachPage() {
   const [selectedTemplate, setSelectedTemplate] = useState('uncollected-royalties')
   const [composeBody, setComposeBody] = useState('')
 
-  const approvedEmails = mockEmails.filter(e => ['DRAFT', 'APPROVED'].includes(e.status as string) || e.status === 'OPENED')
+  const approvedEmails = mockEmails.filter(e => ['DRAFT', 'APPROVED'].includes(e.status as string))
   const sentEmails = mockEmails.filter(e => ['SENT', 'OPENED', 'REPLIED'].includes(e.status))
 
   const getProducerName = (id: string) => mockProducers.find(p => p.id === id)?.writer_name || 'Unknown'
@@ -34,7 +34,7 @@ export default function OutreachPage() {
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: 'In Queue', value: 3, color: '#C9A84C' },
+          { label: 'In Queue', value: approvedEmails.length, color: '#C9A84C' },
           { label: 'Sent', value: mockEmails.length, color: '#5280E0' },
           { label: 'Opened', value: mockEmails.filter(e => e.opened_at).length, color: '#4CAF82' },
           { label: 'Replied', value: mockEmails.filter(e => e.replied_at).length, color: '#4CAF82' },
@@ -61,7 +61,7 @@ export default function OutreachPage() {
               cursor: 'pointer',
               fontSize: 13,
               fontWeight: 600,
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'Inter, sans-serif',
               background: activeTab === tab ? 'rgba(201,168,76,0.15)' : 'transparent',
               color: activeTab === tab ? '#C9A84C' : 'var(--text-secondary)',
               textTransform: 'capitalize',
@@ -191,7 +191,7 @@ export default function OutreachPage() {
                 <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
                   PRODUCER
                 </label>
-                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif' }}>
+                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
                   {mockProducers.filter(p => p.outreach_status === 'PENDING' || p.outreach_status === 'APPROVED').map(p => (
                     <option key={p.id} value={p.id}>{p.writer_name}</option>
                   ))}
@@ -204,7 +204,7 @@ export default function OutreachPage() {
                 <select
                   value={selectedTemplate}
                   onChange={e => setSelectedTemplate(e.target.value)}
-                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif' }}
+                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}
                 >
                   {emailTemplates.map(t => (
                     <option key={t.id} value={t.id}>{t.label}</option>
@@ -217,7 +217,7 @@ export default function OutreachPage() {
                 </label>
                 <input
                   placeholder='Your beat on "{song}" — ${amount}/mo uncollected'
-                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none' }}
+                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none' }}
                 />
               </div>
               <div>
@@ -229,7 +229,7 @@ export default function OutreachPage() {
                   onChange={e => setComposeBody(e.target.value)}
                   rows={10}
                   placeholder="Email body..."
-                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none', resize: 'vertical' }}
+                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', resize: 'vertical' }}
                 />
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -239,34 +239,89 @@ export default function OutreachPage() {
             </div>
           </Panel>
 
-          <Panel title="Template Preview">
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-              <p style={{ marginBottom: 12, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Subject:
-              </p>
-              <p style={{ marginBottom: 20, color: 'var(--text-primary)', fontWeight: 700 }}>
-                Your beat on &quot;[Song Title]&quot; — $[Amount]/mo uncollected
-              </p>
+          <Panel title="Template Guide">
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Subject Line Formula
+                </p>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
+                  Your beat on &quot;[Song Title]&quot; — $[Amount]/mo uncollected
+                </p>
+              </div>
 
-              <p style={{ marginBottom: 12, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Key Points:
-              </p>
-              <ol style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <li>Name their exact song + artist</li>
-                <li>State the specific dollar amount missing monthly</li>
-                <li>Explain why (no publisher = missing royalty types)</li>
-                <li>Credibility: Reyes Music × Raleigh MG, Miami</li>
-                <li>No upfront cost — standard admin deal</li>
-                <li>CTA: 15-min call to show exact breakdown</li>
-              </ol>
+              <div>
+                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Email Key Points
+                </p>
+                <ol style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
+                  <li>Name their exact song + featured artist</li>
+                  <li>State the specific dollar amount missing monthly</li>
+                  <li>Explain the split: writer&apos;s share only ≠ full royalties</li>
+                  <li>Credibility: Reyes Music × Raleigh MG, Miami</li>
+                  <li>No upfront cost — standard 15% admin deal</li>
+                  <li>CTA: 15-min call to show exact catalog breakdown</li>
+                </ol>
+              </div>
 
-              <div style={{ marginTop: 24, padding: '14px 16px', background: 'rgba(201,168,76,0.07)', borderRadius: 8, border: '1px solid rgba(201,168,76,0.2)' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#C9A84C', marginBottom: 6 }}>SCORING RUBRIC</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-                  <div>Streams: 5M+=40pts, 1M+=30pts, 500K+=20pts</div>
-                  <div>No Publisher: +30pts</div>
-                  <div>Email found: +20pts, IG only: +12pts</div>
-                  <div>Catalog 10+ songs: +10pts</div>
+              {/* Royalty Methodology */}
+              <div style={{ background: 'rgba(76,175,130,0.06)', border: '1px solid rgba(76,175,130,0.15)', borderRadius: 8, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#4CAF82', letterSpacing: '0.07em', marginBottom: 10 }}>ROYALTY ESTIMATE METHODOLOGY</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Streaming (Spotify/Apple/Amazon)</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>~$0.0004/stream pub share</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>YouTube Content ID mechanical</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>~20–30% of streaming total</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Radio performance (ASCAP/BMI)</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>varies by market + airplay</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>International digital mechanicals</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>15–25% uplift on digital</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                    Estimates are based on monthly active streaming activity across all platforms, not cumulative stream counts.
+                  </div>
+                </div>
+              </div>
+
+              {/* Scoring Rubric */}
+              <div style={{ padding: '14px 16px', background: 'rgba(201,168,76,0.07)', borderRadius: 8, border: '1px solid rgba(201,168,76,0.2)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C', letterSpacing: '0.07em', marginBottom: 8 }}>LEAD SCORING RUBRIC (0–100)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 11 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>5M+ streams</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+40 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>1M–5M streams</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+30 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>500K–1M streams</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+20 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>No publisher on record</span>
+                    <span style={{ color: '#E05252', fontWeight: 700 }}>+30 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Email address found</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+20 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Instagram only</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+12 pts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Catalog 10+ songs</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+10 pts</span>
+                  </div>
                 </div>
               </div>
             </div>

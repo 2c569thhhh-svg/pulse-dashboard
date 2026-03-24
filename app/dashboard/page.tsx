@@ -1,9 +1,11 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { StatCard, Panel, StatusBadge, ScoreBadge, Streams, ActionBtn } from '@/components/ui'
 import { mockProducers, mockScanJobs, mockStats } from '@/lib/mock-data'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const highPriority = mockProducers.filter(p => p.priority === 'HIGH')
   const recentJobs = mockScanJobs.slice(0, 4)
 
@@ -78,7 +80,7 @@ export default function DashboardPage() {
           title="Top Leads"
           badge={highPriority.length}
           noPad
-          action={<ActionBtn size="sm" variant="ghost">View All</ActionBtn>}
+          action={<ActionBtn size="sm" variant="ghost" onClick={() => router.push('/producers')}>View All</ActionBtn>}
         >
           <div style={{ overflowX: 'auto' }}>
             <table className="data-table">
@@ -159,15 +161,21 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <Panel title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <ActionBtn variant="gold" style={{ width: '100%' }}>
-                ▶ Run Scan — Lil Durk
-              </ActionBtn>
-              <ActionBtn variant="green" style={{ width: '100%' }}>
-                ✓ Approve Top Emails
-              </ActionBtn>
-              <ActionBtn variant="ghost" style={{ width: '100%' }}>
-                ↗ Open Scan Engine
-              </ActionBtn>
+              <div style={{ width: '100%' }}>
+                <ActionBtn variant="gold" className="w-full" onClick={() => router.push('/scan')}>
+                  ▶ Run Scan — Lil Durk
+                </ActionBtn>
+              </div>
+              <div style={{ width: '100%' }}>
+                <ActionBtn variant="green" className="w-full" onClick={() => router.push('/outreach')}>
+                  ✓ Approve Top Emails
+                </ActionBtn>
+              </div>
+              <div style={{ width: '100%' }}>
+                <ActionBtn variant="ghost" className="w-full" onClick={() => router.push('/scan')}>
+                  ↗ Open Scan Engine
+                </ActionBtn>
+              </div>
             </div>
           </Panel>
         </div>

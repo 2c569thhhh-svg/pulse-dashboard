@@ -262,16 +262,27 @@ export default function Sidebar() {
             onClick={() => setCollapsed(false)}
             title="Expand sidebar"
             style={{
-              position: 'absolute',
-              bottom: -1,
-              left: '50%',
-              transform: 'translateX(-50%)',
               background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--text-disabled)', padding: '4px 6px',
               borderRadius: 5, display: 'flex', alignItems: 'center',
+              marginTop: 4,
               transition: 'color 0.12s, background 0.12s',
             }}
-          />
+            onMouseEnter={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-disabled)'
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
         )}
       </div>
 

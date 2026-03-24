@@ -46,7 +46,7 @@ export default function ProducersPage() {
             padding: '10px 16px',
             color: 'var(--text-primary)',
             fontSize: 13,
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             outline: 'none',
           }}
         />
@@ -60,7 +60,7 @@ export default function ProducersPage() {
             padding: '10px 16px',
             color: 'var(--text-primary)',
             fontSize: 13,
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             cursor: 'pointer',
           }}
         >
@@ -80,7 +80,7 @@ export default function ProducersPage() {
             padding: '10px 16px',
             color: 'var(--text-primary)',
             fontSize: 13,
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             cursor: 'pointer',
           }}
         >
