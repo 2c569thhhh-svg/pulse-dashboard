@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Panel, StatusBadge, ActionBtn } from '@/components/ui'
 import { mockScanJobs } from '@/lib/mock-data'
+import { generateEmailDraft } from '@/lib/email-templates'
+import { saveProducer, saveEmail } from '@/lib/pipeline-store'
+import type { Producer, OutreachEmail } from '@/types/database'
 
 interface ScanLead {
   writer_name: string
@@ -12,10 +16,14 @@ interface ScanLead {
   song_title: string
   isrc: string | null
   associated_artist: string
+  ai_score?: number
+  priority?: 'HIGH' | 'MEDIUM' | 'LOW'
+  estimated_monthly_royalties?: number
 }
 
 interface ScanResult {
   success: boolean
+  demo?: boolean
   artist: string
   songsScanned: number
   leadsFound: number
@@ -33,7 +41,7 @@ const howItWorks = [
   {
     step: '02',
     title: 'Catalog Pull',
-    desc: 'Pull up to 20 of the artist\'s songs with ISRC codes and release metadata.',
+    desc: "Pull up to 20 of the artist's songs with ISRC codes and release metadata.",
   },
   {
     step: '03',
@@ -43,7 +51,7 @@ const howItWorks = [
   {
     step: '04',
     title: 'Publisher Check',
-    desc: 'Look up each writer\'s IPI in the publisher registry. If no publisher is on record, the writer is flagged as a lead.',
+    desc: "Look up each writer's IPI in the publisher registry. If no publisher is on record, the writer is flagged as a lead.",
   },
   {
     step: '05',
@@ -53,16 +61,35 @@ const howItWorks = [
 ]
 
 export default function ScanPage() {
+  const router = useRouter()
   const [artistName, setArtistName] = useState('')
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [approvedLeads, setApprovedLeads] = useState<Set<string>>(new Set())
+  const [recentJobs, setRecentJobs] = useState(mockScanJobs.slice(0, 5))
+
+  // Read ?artist= param on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const artist = params.get('artist')
+    if (artist) setArtistName(artist)
+  }, [])
+
+  // Load recent jobs from API
+  useEffect(() => {
+    fetch('/api/scan')
+      .then(r => r.json())
+      .then(d => { if (d.jobs?.length) setRecentJobs(d.jobs.slice(0, 5)) })
+      .catch(() => {})
+  }, [])
 
   const handleScan = async () => {
     if (!artistName.trim() || scanning) return
     setScanning(true)
     setError(null)
     setResult(null)
+    setApprovedLeads(new Set())
 
     try {
       const res = await fetch('/api/scan', {
@@ -83,7 +110,63 @@ export default function ScanPage() {
     }
   }
 
-  const recentJobs = mockScanJobs.slice(0, 5)
+  const handleApproveLead = (lead: ScanLead) => {
+    const id = lead.ipi_number || `lead_${Date.now()}`
+    const producer: Producer = {
+      id,
+      created_at: new Date().toISOString(),
+      writer_name: lead.writer_name,
+      ipi_number: lead.ipi_number,
+      pro: lead.pro,
+      publisher_status: lead.publisher_status as Producer['publisher_status'],
+      outreach_status: 'APPROVED',
+      ai_score: lead.ai_score ?? null,
+      priority: (lead.priority as Producer['priority']) ?? null,
+      estimated_monthly_royalties: lead.estimated_monthly_royalties ?? null,
+      instagram: null,
+      email: null,
+      twitter: null,
+      spotify_streams: null,
+      catalog_count: null,
+      associated_artists: [lead.associated_artist],
+      top_song: lead.song_title,
+      reasoning: `No publisher found on "${lead.song_title}" — uncollected publisher's share`,
+      notes: null,
+    }
+
+    const draft = generateEmailDraft(producer)
+    const email: OutreachEmail = {
+      id: `email_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      producer_id: id,
+      ...draft,
+      status: 'DRAFT',
+      sent_at: null,
+      opened_at: null,
+      clicked_at: null,
+      replied_at: null,
+      template_used: 'uncollected-royalties',
+      sendgrid_message_id: null,
+    }
+
+    saveProducer(producer)
+    saveEmail(email)
+    setApprovedLeads(prev => { const next = new Set(prev); next.add(lead.writer_name); return next })
+
+    // Also call API in background
+    fetch('/api/outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ producerId: id, producerData: producer }),
+    }).catch(() => {})
+  }
+
+  const handleApproveAll = () => {
+    if (!result?.leads) return
+    result.leads.forEach(lead => {
+      if (!approvedLeads.has(lead.writer_name)) handleApproveLead(lead)
+    })
+  }
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200, minHeight: '100vh' }}>
@@ -100,23 +183,23 @@ export default function ScanPage() {
 
       {/* ── How It Works ───────────────────────────────── */}
       <div style={{ marginBottom: 16 }}>
-      <Panel title="How It Works">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
-          {howItWorks.map(item => (
-            <div key={item.step}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.08em', marginBottom: 6 }}>
-                {item.step}
+        <Panel title="How It Works">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+            {howItWorks.map(item => (
+              <div key={item.step}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  {item.step}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  {item.desc}
+                </div>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                {item.title}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                {item.desc}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Panel>
+            ))}
+          </div>
+        </Panel>
       </div>
 
       {/* ── PRO Data Sources ────────────────────────────── */}
@@ -191,12 +274,31 @@ export default function ScanPage() {
             {/* Results */}
             {result && (
               <div>
+                {/* Demo banner */}
+                {result.demo && (
+                  <div style={{
+                    background: 'rgba(201,168,76,0.07)',
+                    border: '1px solid rgba(201,168,76,0.2)',
+                    borderRadius: 8,
+                    padding: '10px 14px',
+                    marginBottom: 12,
+                    fontSize: 11,
+                    color: 'var(--gold)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}>
+                    <span style={{ fontWeight: 700 }}>⚠ DEMO MODE</span>
+                    <span style={{ color: 'var(--text-muted)' }}>— Add your Soundcharts API token in Settings to scan real databases</span>
+                  </div>
+                )}
+
                 <div style={{
                   background: 'rgba(76,175,130,0.07)',
                   border: '1px solid rgba(76,175,130,0.18)',
                   borderRadius: 8,
                   padding: '14px 16px',
-                  marginBottom: 16,
+                  marginBottom: 12,
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#4CAF82', marginBottom: 8 }}>
                     ✓ Scan complete — {result.artist}
@@ -209,37 +311,104 @@ export default function ScanPage() {
                 </div>
 
                 {result.leads.length > 0 && (
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Writer</th>
-                        <th>PRO</th>
-                        <th>IPI</th>
-                        <th>Song</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.leads.map((lead, i) => (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{lead.writer_name}</td>
-                          <td>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>
-                              {lead.pro || '—'}
-                            </span>
-                          </td>
-                          <td style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                            {lead.ipi_number || '—'}
-                          </td>
-                          <td>
-                            <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{lead.song_title}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{lead.associated_artist}</div>
-                          </td>
-                          <td><StatusBadge status="NO_PUBLISHER" /></td>
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {approvedLeads.size > 0
+                          ? `${approvedLeads.size} lead${approvedLeads.size > 1 ? 's' : ''} approved — email drafts created`
+                          : 'Approve leads to create outreach email drafts'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {approvedLeads.size > 0 && (
+                          <ActionBtn size="sm" variant="green" onClick={() => router.push('/outreach')}>
+                            View Drafts →
+                          </ActionBtn>
+                        )}
+                        <ActionBtn
+                          size="sm"
+                          variant="gold"
+                          onClick={handleApproveAll}
+                          disabled={approvedLeads.size === result.leads.length}
+                        >
+                          Approve All
+                        </ActionBtn>
+                      </div>
+                    </div>
+
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Writer</th>
+                          <th>PRO</th>
+                          <th>IPI</th>
+                          <th>Song</th>
+                          <th>Score</th>
+                          <th>Est. Monthly</th>
+                          <th>Status</th>
+                          <th></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {result.leads.map((lead, i) => {
+                          const approved = approvedLeads.has(lead.writer_name)
+                          return (
+                            <tr key={i}>
+                              <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>
+                                {lead.writer_name}
+                              </td>
+                              <td>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>
+                                  {lead.pro || '—'}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                {lead.ipi_number || '—'}
+                              </td>
+                              <td>
+                                <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{lead.song_title}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{lead.associated_artist}</div>
+                              </td>
+                              <td>
+                                {lead.ai_score != null && (
+                                  <span style={{
+                                    fontSize: 12, fontWeight: 700,
+                                    color: lead.ai_score >= 70 ? '#4CAF82' : lead.ai_score >= 40 ? '#C9A84C' : 'var(--text-muted)',
+                                  }}>
+                                    {lead.ai_score}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                {lead.estimated_monthly_royalties ? (
+                                  <span style={{ color: '#4CAF82', fontWeight: 600, fontSize: 12 }}>
+                                    ${lead.estimated_monthly_royalties.toLocaleString()}/mo
+                                  </span>
+                                ) : '—'}
+                              </td>
+                              <td><StatusBadge status="NO_PUBLISHER" /></td>
+                              <td>
+                                {approved ? (
+                                  <span style={{ fontSize: 11, color: '#4CAF82', fontWeight: 600 }}>✓ Approved</span>
+                                ) : (
+                                  <ActionBtn size="sm" variant="green" onClick={() => handleApproveLead(lead)}>
+                                    Approve
+                                  </ActionBtn>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+
+                    {approvedLeads.size > 0 && (
+                      <div style={{ marginTop: 12, textAlign: 'center' }}>
+                        <ActionBtn variant="gold" onClick={() => router.push('/outreach')}>
+                          View Email Drafts in Outreach →
+                        </ActionBtn>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {result.leads.length === 0 && (

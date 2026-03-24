@@ -1,8 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Panel, StatusBadge, ActionBtn } from '@/components/ui'
 import { mockEmails, mockProducers } from '@/lib/mock-data'
+import { generateEmailDraft } from '@/lib/email-templates'
+import {
+  getStoredEmails,
+  getStoredProducers,
+  saveEmail,
+  removeEmail,
+  updateEmailStatus,
+  mergeEmails,
+  mergeProducers,
+} from '@/lib/pipeline-store'
+import type { OutreachEmail } from '@/types/database'
 
 const emailTemplates = [
   { id: 'uncollected-royalties', label: 'Uncollected Royalties' },
@@ -12,37 +23,160 @@ const emailTemplates = [
 
 export default function OutreachPage() {
   const [activeTab, setActiveTab] = useState<'queue' | 'sent' | 'compose'>('queue')
+  const [emails, setEmails] = useState<OutreachEmail[]>(mockEmails)
+  const [producers, setProducers] = useState(mockProducers)
   const [selectedTemplate, setSelectedTemplate] = useState('uncollected-royalties')
+  const [composeProducerId, setComposeProducerId] = useState('')
+  const [composeSubject, setComposeSubject] = useState('')
   const [composeBody, setComposeBody] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editBody, setEditBody] = useState('')
+  const [toast, setToast] = useState<string | null>(null)
 
-  const approvedEmails = mockEmails.filter(e => ['DRAFT', 'APPROVED'].includes(e.status as string))
-  const sentEmails = mockEmails.filter(e => ['SENT', 'OPENED', 'REPLIED'].includes(e.status))
+  useEffect(() => {
+    const storedEmails = getStoredEmails()
+    const storedProducers = getStoredProducers()
+    setEmails(mergeEmails(mockEmails, storedEmails))
+    setProducers(mergeProducers(mockProducers, storedProducers))
+  }, [])
 
-  const getProducerName = (id: string) => mockProducers.find(p => p.id === id)?.writer_name || 'Unknown'
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const getProducerName = (id: string) =>
+    producers.find(p => p.id === id)?.writer_name || 'Unknown'
+
+  const getProducer = (id: string) => producers.find(p => p.id === id)
+
+  const handleApproveAndSend = (email: OutreachEmail) => {
+    const updated = { ...email, status: 'SENT' as const, sent_at: new Date().toISOString() }
+    setEmails(prev => prev.map(e => e.id === email.id ? updated : e))
+    updateEmailStatus(email.id, 'SENT')
+    fetch('/api/outreach', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: email.id, status: 'SENT', sent_at: new Date().toISOString() }),
+    }).catch(() => {})
+    showToast(`✓ Email sent to ${getProducerName(email.producer_id)}`)
+  }
+
+  const handleDiscard = (email: OutreachEmail) => {
+    setEmails(prev => prev.filter(e => e.id !== email.id))
+    removeEmail(email.id)
+    showToast('Email discarded')
+  }
+
+  const handleStartEdit = (email: OutreachEmail) => {
+    setEditingId(email.id)
+    setEditBody(email.body)
+  }
+
+  const handleSaveEdit = (email: OutreachEmail) => {
+    const updated = { ...email, body: editBody }
+    setEmails(prev => prev.map(e => e.id === email.id ? updated : e))
+    saveEmail(updated)
+    setEditingId(null)
+    showToast('Draft saved')
+  }
+
+  const handleFollowUp = (email: OutreachEmail) => {
+    const producer = getProducer(email.producer_id)
+    const draft = generateEmailDraft({
+      writer_name: getProducerName(email.producer_id),
+      top_song: producer?.top_song,
+      associated_artists: producer?.associated_artists,
+      estimated_monthly_royalties: producer?.estimated_monthly_royalties,
+      pro: producer?.pro,
+    })
+    const followUp: OutreachEmail = {
+      id: `email_followup_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      producer_id: email.producer_id,
+      subject: `Follow-up: ${draft.subject}`,
+      body: `Hey — just following up on my last message.\n\n${draft.body}`,
+      status: 'DRAFT',
+      sent_at: null,
+      opened_at: null,
+      clicked_at: null,
+      replied_at: null,
+      template_used: 'follow-up',
+      sendgrid_message_id: null,
+    }
+    setEmails(prev => [followUp, ...prev])
+    saveEmail(followUp)
+    setActiveTab('queue')
+    showToast('✓ Follow-up draft created')
+  }
+
+  const handleGenerateWithAI = () => {
+    if (!composeProducerId) return
+    const producer = producers.find(p => p.id === composeProducerId) || producers[0]
+    const draft = generateEmailDraft(producer)
+    setComposeSubject(draft.subject)
+    setComposeBody(draft.body)
+    showToast('✓ Email generated from template')
+  }
+
+  const handleSaveDraft = () => {
+    if (!composeBody.trim()) return
+    const producerId = composeProducerId || producers[0]?.id
+    const draft: OutreachEmail = {
+      id: `email_compose_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      producer_id: producerId,
+      subject: composeSubject || 'Untitled Draft',
+      body: composeBody,
+      status: 'DRAFT',
+      sent_at: null,
+      opened_at: null,
+      clicked_at: null,
+      replied_at: null,
+      template_used: selectedTemplate,
+      sendgrid_message_id: null,
+    }
+    setEmails(prev => [draft, ...prev])
+    saveEmail(draft)
+    setComposeBody('')
+    setComposeSubject('')
+    setActiveTab('queue')
+    showToast('✓ Draft saved to queue')
+  }
+
+  const queueEmails = emails.filter(e => ['DRAFT', 'APPROVED'].includes(e.status))
+  const sentEmails = emails.filter(e => ['SENT', 'OPENED', 'REPLIED'].includes(e.status))
 
   return (
     <div style={{ padding: 32, maxWidth: 1400 }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 100,
+          background: 'rgba(20,20,28,0.97)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: '12px 20px', fontSize: 13,
+          color: 'var(--text-primary)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}>
+          {toast}
+        </div>
+      )}
+
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '0.02em', marginBottom: 6 }}>
-          Outreach
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Email workflow — approval queue, sent history, and composer
-        </p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '0.02em', marginBottom: 6 }}>Outreach</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Email workflow — approval queue, sent history, and composer</p>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: 'In Queue', value: approvedEmails.length, color: '#C9A84C' },
-          { label: 'Sent', value: mockEmails.length, color: '#5280E0' },
-          { label: 'Opened', value: mockEmails.filter(e => e.opened_at).length, color: '#4CAF82' },
-          { label: 'Replied', value: mockEmails.filter(e => e.replied_at).length, color: '#4CAF82' },
+          { label: 'In Queue', value: queueEmails.length, color: '#C9A84C' },
+          { label: 'Sent', value: sentEmails.length, color: '#5280E0' },
+          { label: 'Opened', value: emails.filter(e => e.opened_at).length, color: '#4CAF82' },
+          { label: 'Replied', value: emails.filter(e => e.replied_at).length, color: '#4CAF82' },
         ].map(stat => (
           <div key={stat.label} className="glass-card" style={{ padding: '16px 20px', borderLeft: `2px solid ${stat.color}` }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              {stat.label}
-            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{stat.label}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>{stat.value}</div>
           </div>
         ))}
@@ -55,34 +189,35 @@ export default function OutreachPage() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: '8px 20px',
-              borderRadius: 7,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
+              padding: '8px 20px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, fontFamily: 'Inter, sans-serif',
               background: activeTab === tab ? 'rgba(201,168,76,0.15)' : 'transparent',
               color: activeTab === tab ? '#C9A84C' : 'var(--text-secondary)',
               textTransform: 'capitalize',
             }}
           >
-            {tab === 'queue' ? 'Approval Queue' : tab === 'sent' ? 'Sent History' : 'Compose'}
+            {tab === 'queue' ? `Approval Queue${queueEmails.length > 0 ? ` (${queueEmails.length})` : ''}` : tab === 'sent' ? 'Sent History' : 'Compose'}
           </button>
         ))}
       </div>
 
+      {/* ── Approval Queue ── */}
       {activeTab === 'queue' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {approvedEmails.map(email => {
-            const producer = mockProducers.find(p => p.id === email.producer_id)
+          {queueEmails.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--text-muted)', fontSize: 14 }}>
+              <div style={{ marginBottom: 8, fontSize: 20 }}>📭</div>
+              No drafts in queue — approve producers from the Leads page or run a scan
+            </div>
+          )}
+          {queueEmails.map(email => {
+            const producer = getProducer(email.producer_id)
+            const isEditing = editingId === email.id
             return (
               <div key={email.id} className="glass-card" style={{ padding: '20px 24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-                      {email.subject}
-                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{email.subject}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       To: {getProducerName(email.producer_id)}
                       {producer?.email && ` <${producer.email}>`}
@@ -90,43 +225,49 @@ export default function OutreachPage() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <StatusBadge status={email.status} />
-                    {producer?.ai_score && (
-                      <span style={{
-                        background: 'rgba(201,168,76,0.15)',
-                        color: '#C9A84C',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '3px 10px',
-                        borderRadius: 20,
-                      }}>
+                    {producer?.ai_score != null && (
+                      <span style={{ background: 'rgba(201,168,76,0.15)', color: '#C9A84C', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
                         Score {producer.ai_score}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: 'rgba(0,0,0,0.3)',
-                    borderRadius: 8,
-                    padding: '16px',
-                    fontSize: 12,
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap',
-                    marginBottom: 16,
-                    fontFamily: 'monospace',
-                    maxHeight: 200,
-                    overflow: 'auto',
-                  }}
-                >
-                  {email.body}
-                </div>
+                {isEditing ? (
+                  <textarea
+                    value={editBody}
+                    onChange={e => setEditBody(e.target.value)}
+                    rows={10}
+                    style={{
+                      width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8, padding: 16, fontSize: 12, color: 'var(--text-primary)',
+                      lineHeight: 1.7, fontFamily: 'monospace', marginBottom: 12, resize: 'vertical', outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: 16,
+                    fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7,
+                    whiteSpace: 'pre-wrap', marginBottom: 16, fontFamily: 'monospace',
+                    maxHeight: 200, overflow: 'auto',
+                  }}>
+                    {email.body}
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <ActionBtn variant="green">Approve & Send</ActionBtn>
-                  <ActionBtn variant="ghost">Edit Draft</ActionBtn>
-                  <ActionBtn variant="red">Discard</ActionBtn>
+                  <ActionBtn variant="green" onClick={() => handleApproveAndSend(email)}>
+                    Approve &amp; Send
+                  </ActionBtn>
+                  {isEditing ? (
+                    <>
+                      <ActionBtn variant="gold" onClick={() => handleSaveEdit(email)}>Save Changes</ActionBtn>
+                      <ActionBtn variant="ghost" onClick={() => setEditingId(null)}>Cancel</ActionBtn>
+                    </>
+                  ) : (
+                    <ActionBtn variant="ghost" onClick={() => handleStartEdit(email)}>Edit Draft</ActionBtn>
+                  )}
+                  <ActionBtn variant="red" onClick={() => handleDiscard(email)}>Discard</ActionBtn>
                 </div>
               </div>
             )
@@ -134,96 +275,95 @@ export default function OutreachPage() {
         </div>
       )}
 
+      {/* ── Sent History ── */}
       {activeTab === 'sent' && (
         <Panel title="Sent History" badge={sentEmails.length}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Producer</th>
-                <th>Subject</th>
-                <th>Status</th>
-                <th>Sent</th>
-                <th>Opened</th>
-                <th>Replied</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sentEmails.map(email => (
-                <tr key={email.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {getProducerName(email.producer_id)}
-                  </td>
-                  <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {email.subject}
-                  </td>
-                  <td><StatusBadge status={email.status} /></td>
-                  <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {email.sent_at ? new Date(email.sent_at).toLocaleDateString() : '—'}
-                  </td>
-                  <td>
-                    {email.opened_at ? (
-                      <span style={{ color: '#4CAF82', fontSize: 12 }}>
-                        {new Date(email.opened_at).toLocaleDateString()}
-                      </span>
-                    ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
-                  </td>
-                  <td>
-                    {email.replied_at ? (
-                      <span style={{ color: '#4CAF82', fontWeight: 700, fontSize: 12 }}>✓ Replied</span>
-                    ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
-                  </td>
-                  <td>
-                    <ActionBtn size="sm" variant="ghost">Follow Up</ActionBtn>
-                  </td>
+          {sentEmails.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
+              No sent emails yet — approve drafts from the queue to send them
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Producer</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Sent</th>
+                  <th>Opened</th>
+                  <th>Replied</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sentEmails.map(email => (
+                  <tr key={email.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{getProducerName(email.producer_id)}</td>
+                    <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.subject}</td>
+                    <td><StatusBadge status={email.status} /></td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      {email.sent_at ? new Date(email.sent_at).toLocaleDateString() : '—'}
+                    </td>
+                    <td>
+                      {email.opened_at
+                        ? <span style={{ color: '#4CAF82', fontSize: 12 }}>{new Date(email.opened_at).toLocaleDateString()}</span>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td>
+                      {email.replied_at
+                        ? <span style={{ color: '#4CAF82', fontWeight: 700, fontSize: 12 }}>✓ Replied</span>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td>
+                      <ActionBtn size="sm" variant="ghost" onClick={() => handleFollowUp(email)}>Follow Up</ActionBtn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </Panel>
       )}
 
+      {/* ── Compose ── */}
       {activeTab === 'compose' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           <Panel title="Compose Email">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                  PRODUCER
-                </label>
-                <select style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
-                  {mockProducers.filter(p => p.outreach_status === 'PENDING' || p.outreach_status === 'APPROVED').map(p => (
+                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>PRODUCER</label>
+                <select
+                  value={composeProducerId}
+                  onChange={e => setComposeProducerId(e.target.value)}
+                  style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}
+                >
+                  <option value="">Select a producer...</option>
+                  {producers.filter(p => ['PENDING', 'APPROVED'].includes(p.outreach_status)).map(p => (
                     <option key={p.id} value={p.id}>{p.writer_name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                  TEMPLATE
-                </label>
+                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>TEMPLATE</label>
                 <select
                   value={selectedTemplate}
                   onChange={e => setSelectedTemplate(e.target.value)}
                   style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}
                 >
-                  {emailTemplates.map(t => (
-                    <option key={t.id} value={t.id}>{t.label}</option>
-                  ))}
+                  {emailTemplates.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                  SUBJECT
-                </label>
+                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>SUBJECT</label>
                 <input
+                  value={composeSubject}
+                  onChange={e => setComposeSubject(e.target.value)}
                   placeholder='Your beat on "{song}" — ${amount}/mo uncollected'
                   style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                  BODY
-                </label>
+                <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 8 }}>BODY</label>
                 <textarea
                   value={composeBody}
                   onChange={e => setComposeBody(e.target.value)}
@@ -233,8 +373,12 @@ export default function OutreachPage() {
                 />
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <ActionBtn variant="gold">Generate with AI</ActionBtn>
-                <ActionBtn variant="green">Save Draft</ActionBtn>
+                <ActionBtn variant="gold" onClick={handleGenerateWithAI} disabled={!composeProducerId}>
+                  Generate from Template
+                </ActionBtn>
+                <ActionBtn variant="green" onClick={handleSaveDraft} disabled={!composeBody.trim()}>
+                  Save Draft
+                </ActionBtn>
               </div>
             </div>
           </Panel>
@@ -242,18 +386,11 @@ export default function OutreachPage() {
           <Panel title="Template Guide">
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
-                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Subject Line Formula
-                </p>
-                <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
-                  Your beat on &quot;[Song Title]&quot; — $[Amount]/mo uncollected
-                </p>
+                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Subject Line Formula</p>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>Your beat on &quot;[Song Title]&quot; — $[Amount]/mo uncollected</p>
               </div>
-
               <div>
-                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Email Key Points
-                </p>
+                <p style={{ marginBottom: 8, color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email Key Points</p>
                 <ol style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
                   <li>Name their exact song + featured artist</li>
                   <li>State the specific dollar amount missing monthly</li>
@@ -263,8 +400,6 @@ export default function OutreachPage() {
                   <li>CTA: 15-min call to show exact catalog breakdown</li>
                 </ol>
               </div>
-
-              {/* Royalty Methodology */}
               <div style={{ background: 'rgba(76,175,130,0.06)', border: '1px solid rgba(76,175,130,0.15)', borderRadius: 8, padding: '14px 16px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#4CAF82', letterSpacing: '0.07em', marginBottom: 10 }}>ROYALTY ESTIMATE METHODOLOGY</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
@@ -283,44 +418,6 @@ export default function OutreachPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>International digital mechanicals</span>
                     <span style={{ color: 'var(--text-secondary)' }}>15–25% uplift on digital</span>
-                  </div>
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
-                    Estimates are based on monthly active streaming activity across all platforms, not cumulative stream counts.
-                  </div>
-                </div>
-              </div>
-
-              {/* Scoring Rubric */}
-              <div style={{ padding: '14px 16px', background: 'rgba(201,168,76,0.07)', borderRadius: 8, border: '1px solid rgba(201,168,76,0.2)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C', letterSpacing: '0.07em', marginBottom: 8 }}>LEAD SCORING RUBRIC (0–100)</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 11 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>5M+ streams</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+40 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>1M–5M streams</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+30 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>500K–1M streams</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+20 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>No publisher on record</span>
-                    <span style={{ color: '#E05252', fontWeight: 700 }}>+30 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Email address found</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+20 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Instagram only</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+12 pts</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Catalog 10+ songs</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>+10 pts</span>
                   </div>
                 </div>
               </div>
