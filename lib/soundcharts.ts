@@ -108,6 +108,9 @@ export async function scanArtistForLeads(artistName: string) {
   console.log(`[Soundcharts] Found ${songs.length} songs`)
 
   const leads = []
+  // Track unique writers (by IPI) across all songs to avoid double-counting
+  const seenWriterIPIs = new Set<string>()
+  let totalWritersFound = 0
 
   // 3. For each song, get metadata and check writers
   for (const song of songs.slice(0, 10)) {
@@ -117,6 +120,12 @@ export async function scanArtistForLeads(artistName: string) {
 
       for (const writer of metadata.writers) {
         if (!writer.ipi) continue
+
+        // Count unique writers
+        if (!seenWriterIPIs.has(writer.ipi)) {
+          seenWriterIPIs.add(writer.ipi)
+          totalWritersFound++
+        }
 
         const publisher = await getPublisherByIPI(writer.ipi)
         const hasPublisher = publisher && publisher.name && publisher.name.trim() !== ''
@@ -140,5 +149,5 @@ export async function scanArtistForLeads(artistName: string) {
     }
   }
 
-  return { artist, songs, leads }
+  return { artist, songs, leads, writersFound: totalWritersFound }
 }
