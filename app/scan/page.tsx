@@ -69,7 +69,8 @@ export default function ScanPage() {
       </div>
 
       {/* Search input */}
-      <Panel style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20 }}>
+      <Panel>
         <div style={{ display: 'flex', gap: 10 }}>
           <input
             className="input-dark"
@@ -124,6 +125,7 @@ export default function ScanPage() {
           </div>
         </div>
       </Panel>
+      </div>
 
       {/* Scanning indicator */}
       {scanState === 'running' && (

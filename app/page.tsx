@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { IridescentOrb } from '@/components/ui/IridescentOrb'
-import type { NewRelease, ReleaseWriter } from '@/app/api/new-releases/route'
+import type { NewRelease, ReleaseWriter } from '@/lib/types'
 
 // ── Orbiting writer name tag ──────────────────────────────────────────────────
 function OrbitTag({ name, radius, duration, delay }: {
@@ -169,7 +169,7 @@ export default function LandingPage() {
 
   // Flatten unaffiliated writers for orbit tags and counts
   const allUnaffiliated = releases.flatMap(r => r.writers.filter(w => !w.hasPublisher).map(w => w.name))
-  const uniqueOrbitNames = [...new Set(allUnaffiliated)].slice(0, 7)
+  const uniqueOrbitNames = Array.from(new Set(allUnaffiliated)).slice(0, 7)
   const releasesWithLeads = releases.filter(r => r.writers.some(w => !w.hasPublisher))
   const ORBIT_PARAMS = [
     { radius: 215, duration: 22, delay: 0 },
