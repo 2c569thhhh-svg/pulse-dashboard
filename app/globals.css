@@ -325,6 +325,35 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: scale(1.55); opacity: 0; }
 }
 
+/* ─── ORBIT ANIMATION (landing page writer tags) ───────────────────────────── */
+/* Arm rotates CW from center; tag counter-rotates CCW so text stays upright   */
+.orbit-arm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  animation-name: orbitCW;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  pointer-events: none;
+}
+
+.orbit-tag {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+  animation-name: orbitCCW;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+@keyframes orbitCW  { to { transform: rotate(360deg);  } }
+@keyframes orbitCCW { to { transform: rotate(-360deg); } }
+
 /* ─── ENHANCED GLOW CARD (dashboard override) ───────────────────────────────── */
 .glow-card-purple::before {
   background: radial-gradient(
