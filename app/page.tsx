@@ -5,14 +5,6 @@ import Link from 'next/link'
 import { IridescentOrb } from '@/components/ui/IridescentOrb'
 import type { NewRelease, ReleaseWriter } from '@/app/api/new-releases/route'
 
-// ── Flat list of every unaffiliated writer across all releases ────────────────
-interface Lead extends ReleaseWriter {
-  track: string
-  artist: string
-  albumArt: string
-  releaseDate: string
-}
-
 // ── Orbiting writer name tag ──────────────────────────────────────────────────
 function OrbitTag({ name, radius, duration, delay }: {
   name: string
@@ -51,8 +43,11 @@ function OrbitTag({ name, radius, duration, delay }: {
   )
 }
 
-// ── Writer lead card ──────────────────────────────────────────────────────────
-function LeadCard({ lead }: { lead: Lead }) {
+// ── Release card — shows one release with all its unaffiliated writers ────────
+function ReleaseCard({ release }: { release: NewRelease }) {
+  const unaffiliated = release.writers.filter(w => !w.hasPublisher)
+  if (!unaffiliated.length) return null
+
   return (
     <div
       style={{
@@ -63,12 +58,11 @@ function LeadCard({ lead }: { lead: Lead }) {
         display: 'flex',
         flexDirection: 'column',
         transition: 'border-color 0.2s ease, background 0.2s ease, transform 0.2s ease',
-        cursor: 'default',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = 'rgba(155, 126, 248, 0.25)'
-        el.style.background = 'rgba(130, 60, 255, 0.06)'
+        el.style.borderColor = 'rgba(155,126,248,0.25)'
+        el.style.background = 'rgba(130,60,255,0.05)'
         el.style.transform = 'translateY(-2px)'
       }}
       onMouseLeave={e => {
@@ -78,86 +72,70 @@ function LeadCard({ lead }: { lead: Lead }) {
         el.style.transform = 'translateY(0)'
       }}
     >
-      {/* Album art banner */}
-      <div style={{ height: 56, background: 'rgba(130,60,255,0.08)', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-        {lead.albumArt ? (
+      {/* Album art header */}
+      <div style={{ display: 'flex', gap: 14, padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        {release.albumArt ? (
           <img
-            src={lead.albumArt}
+            src={release.albumArt}
             alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.55, filter: 'blur(6px) saturate(1.4)', transform: 'scale(1.1)' }}
+            style={{ width: 48, height: 48, borderRadius: 7, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(130,60,255,0.15), rgba(78,205,196,0.08))' }} />
+          <div style={{ width: 48, height: 48, borderRadius: 7, background: 'linear-gradient(135deg, rgba(130,60,255,0.2), rgba(78,205,196,0.1))', flexShrink: 0 }} />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(9,9,15,0.7) 0%, transparent 100%)' }} />
-        {/* Small album art */}
-        {lead.albumArt && (
-          <img
-            src={lead.albumArt}
-            alt=""
-            style={{ position: 'absolute', bottom: 8, left: 14, width: 32, height: 32, borderRadius: 5, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.12)' }}
-          />
-        )}
-        {/* NO PUBLISHER badge */}
-        <span style={{
-          position: 'absolute', top: 8, right: 10,
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-          padding: '2px 8px', borderRadius: 99,
-          background: 'rgba(224, 82, 82, 0.18)', color: '#f16060',
-          border: '1px solid rgba(224,82,82,0.25)',
-        }}>
-          NO PUBLISHER
-        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.95)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {release.track}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{release.artist}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-disabled)', marginTop: 2 }}>
+            {new Date(release.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        </div>
       </div>
 
-      {/* Body */}
-      <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Writer name */}
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.95)', letterSpacing: '-0.02em', marginBottom: 3 }}>
-            {lead.name}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {lead.track} — {lead.artist}
-          </div>
+      {/* Unaffiliated writers list */}
+      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>
+          Unaffiliated Writers ({unaffiliated.length})
         </div>
-
-        {/* Stats row */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {lead.pro && (
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
-              background: 'rgba(82,128,224,0.1)', color: '#5b8def',
-              border: '1px solid rgba(82,128,224,0.18)', letterSpacing: '0.04em',
-            }}>
-              {lead.pro}
+        {unaffiliated.map((w, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.88)', letterSpacing: '-0.01em' }}>
+              {w.name}
             </span>
-          )}
-          {lead.estimatedMonthly && (
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
-              background: 'rgba(62,207,142,0.1)', color: 'var(--green)',
-              border: '1px solid rgba(62,207,142,0.18)',
-            }}>
-              ~${lead.estimatedMonthly.toLocaleString()}/mo uncollected
-            </span>
-          )}
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              {w.pro && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                  background: 'rgba(82,128,224,0.1)', color: '#5b8def',
+                  border: '1px solid rgba(82,128,224,0.18)', letterSpacing: '0.04em',
+                }}>
+                  {w.pro}
+                </span>
+              )}
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                background: 'rgba(224,82,82,0.1)', color: '#f16060',
+                border: '1px solid rgba(224,82,82,0.2)', letterSpacing: '0.04em',
+              }}>
+                NO PUB
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* Release date */}
-        <div style={{ fontSize: 11, color: 'var(--text-disabled)', marginTop: 'auto' }}>
-          Released {new Date(lead.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </div>
-
-        {/* CTA */}
+      {/* CTA */}
+      <div style={{ padding: '0 16px 14px' }}>
         <Link
           href="/producers"
           style={{
             display: 'block', textAlign: 'center',
-            padding: '7px 0', borderRadius: 8, marginTop: 2,
-            background: 'rgba(130, 60, 255, 0.1)',
-            border: '1px solid rgba(155, 126, 248, 0.2)',
-            color: 'rgba(200, 160, 255, 0.9)',
+            padding: '7px 0', borderRadius: 8,
+            background: 'rgba(130,60,255,0.1)',
+            border: '1px solid rgba(155,126,248,0.2)',
+            color: 'rgba(200,160,255,0.9)',
             fontSize: 12, fontWeight: 600,
             textDecoration: 'none',
             transition: 'background 0.15s ease',
@@ -175,7 +153,6 @@ function LeadCard({ lead }: { lead: Lead }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [releases, setReleases] = useState<NewRelease[]>([])
-  const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<'spotify' | 'demo'>('demo')
 
@@ -183,32 +160,17 @@ export default function LandingPage() {
     fetch('/api/new-releases')
       .then(r => r.json())
       .then(data => {
-        const rels: NewRelease[] = data.releases || []
-        setReleases(rels)
+        setReleases(data.releases || [])
         setSource(data.source || 'demo')
-
-        // Flatten to unique unaffiliated writers
-        const seen = new Set<string>()
-        const flat: Lead[] = []
-        for (const rel of rels) {
-          for (const w of rel.writers) {
-            if (!w.hasPublisher) {
-              const key = `${w.name}-${rel.id}`
-              if (!seen.has(key)) {
-                seen.add(key)
-                flat.push({ ...w, track: rel.track, artist: rel.artist, albumArt: rel.albumArt, releaseDate: rel.releaseDate })
-              }
-            }
-          }
-        }
-        setLeads(flat)
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [])
 
-  // Pick up to 7 orbit tags from the leads list
-  const orbitWriters = leads.slice(0, 7)
+  // Flatten unaffiliated writers for orbit tags and counts
+  const allUnaffiliated = releases.flatMap(r => r.writers.filter(w => !w.hasPublisher).map(w => w.name))
+  const uniqueOrbitNames = [...new Set(allUnaffiliated)].slice(0, 7)
+  const releasesWithLeads = releases.filter(r => r.writers.some(w => !w.hasPublisher))
   const ORBIT_PARAMS = [
     { radius: 215, duration: 22, delay: 0 },
     { radius: 230, duration: 28, delay: 8 },
@@ -301,7 +263,7 @@ export default function LandingPage() {
           <span className="live-dot" style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: 'var(--green)' }} />
           {loading
             ? 'SCANNING NEW RELEASES...'
-            : `${leads.length} UNAFFILIATED WRITERS FOUND ACROSS ${releases.length} NEW RELEASES`
+            : `${allUnaffiliated.length} UNAFFILIATED WRITERS ACROSS ${releasesWithLeads.length} NEW RELEASES`
           }
         </div>
 
@@ -309,10 +271,10 @@ export default function LandingPage() {
         <div style={{ position: 'relative', width: 520, height: 520, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
 
           {/* Orbit tags */}
-          {!loading && orbitWriters.map((w, i) => (
+          {!loading && uniqueOrbitNames.map((name, i) => (
             <OrbitTag
-              key={`${w.name}-${i}`}
-              name={w.name}
+              key={`${name}-${i}`}
+              name={name}
               radius={ORBIT_PARAMS[i].radius}
               duration={ORBIT_PARAMS[i].duration}
               delay={ORBIT_PARAMS[i].delay}
@@ -321,7 +283,7 @@ export default function LandingPage() {
 
           {/* The orb itself */}
           <IridescentOrb
-            producerCount={loading ? 0 : leads.length}
+            producerCount={loading ? 0 : allUnaffiliated.length}
             label={loading ? 'Scanning...' : 'Unaffiliated Writers'}
             sublabel={loading ? 'pulling new releases' : 'found this week'}
           />
@@ -367,7 +329,7 @@ export default function LandingPage() {
                 background: 'rgba(130,60,255,0.1)', color: 'rgba(200,160,255,0.8)',
                 border: '1px solid rgba(155,126,248,0.18)',
               }}>
-                {leads.length}
+                {releasesWithLeads.length} releases
               </span>
             )}
           </div>
@@ -387,10 +349,10 @@ export default function LandingPage() {
 
         {/* Loading skeleton */}
         {loading && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{
-                height: 220, borderRadius: 14,
+                height: 200, borderRadius: 14,
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.06)',
                 animation: 'pulse-live 1.8s ease-in-out infinite',
@@ -400,20 +362,20 @@ export default function LandingPage() {
           </div>
         )}
 
-        {/* Leads cards */}
-        {!loading && leads.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
-            {leads.map((lead, i) => (
-              <LeadCard key={`${lead.name}-${i}`} lead={lead} />
+        {/* One card per release, listing all unaffiliated writers inside */}
+        {!loading && releasesWithLeads.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+            {releasesWithLeads.map(release => (
+              <ReleaseCard key={release.id} release={release} />
             ))}
           </div>
         )}
 
         {/* Empty state */}
-        {!loading && leads.length === 0 && (
+        {!loading && releasesWithLeads.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>◎</div>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>No unaffiliated writers found this scan.</div>
+            <div style={{ fontSize: 14, fontWeight: 500 }}>No unaffiliated writers found this week.</div>
             <div style={{ fontSize: 12, marginTop: 6 }}>Check back after the next release cycle.</div>
           </div>
         )}

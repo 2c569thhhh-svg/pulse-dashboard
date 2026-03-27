@@ -59,7 +59,7 @@ export default function OpportunitiesPage() {
               cursor: 'pointer',
               fontSize: 13,
               fontWeight: 600,
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'inherit',
               background: activeTab === tab ? 'rgba(201,168,76,0.15)' : 'transparent',
               color: activeTab === tab ? '#C9A84C' : 'var(--text-secondary)',
               textTransform: 'capitalize',
@@ -77,7 +77,7 @@ export default function OpportunitiesPage() {
               {targetArtists.map(artist => (
                 <div
                   key={artist.name}
-                  className="glass-card"
+                  className="glow-card"
                   style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                   <div>
@@ -106,7 +106,7 @@ export default function OpportunitiesPage() {
           <Panel title="Top Unmatched Leads" badge={highValueLeads.length}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {highValueLeads.map(p => (
-                <div key={p.id} className="glass-card" style={{ padding: '14px 16px' }}>
+                <div key={p.id} className="glow-card" style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
