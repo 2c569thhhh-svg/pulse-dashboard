@@ -14,6 +14,7 @@ interface ScanResult {
   artist: string
   songsScanned: number
   leadsFound: number
+  demo?: boolean
   leads: Array<{
     writer_name: string
     ipi_number: string | null
@@ -63,9 +64,17 @@ export default function ScanPage() {
         <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.035em', color: 'rgba(255,255,255,0.96)', marginBottom: 6 }}>
           Scan Engine
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          Search an artist's catalog via Soundcharts — find writers with no publishing deal
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+            Search an artist&apos;s catalog — find writers with no publishing deal
+          </p>
+          <span style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+            padding: '2px 8px', borderRadius: 99,
+            background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)',
+            color: 'var(--gold)',
+          }}>DEMO MODE</span>
+        </div>
       </div>
 
       {/* Search input */}
