@@ -159,15 +159,15 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <Panel title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <ActionBtn variant="gold" style={{ width: '100%' }}>
+              <div style={{ width: '100%' }}><ActionBtn variant="gold">
                 ▶ Run Scan — Lil Durk
-              </ActionBtn>
-              <ActionBtn variant="green" style={{ width: '100%' }}>
+              </ActionBtn></div>
+              <div style={{ width: '100%' }}><ActionBtn variant="green">
                 ✓ Approve Top Emails
-              </ActionBtn>
-              <ActionBtn variant="ghost" style={{ width: '100%' }}>
+              </ActionBtn></div>
+              <div style={{ width: '100%' }}><ActionBtn variant="ghost">
                 ↗ Open Scan Engine
-              </ActionBtn>
+              </ActionBtn></div>
             </div>
           </Panel>
         </div>
