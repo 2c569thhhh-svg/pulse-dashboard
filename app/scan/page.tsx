@@ -113,7 +113,7 @@ export default function ScanPage() {
         }),
       })
     } catch { /* Supabase may not be configured */ }
-    setAddedLeads(prev => new Set([...prev, lead.writer_name]))
+    setAddedLeads(prev => new Set(Array.from(prev).concat(lead.writer_name)))
   }
 
   async function addAllToPipeline() {
