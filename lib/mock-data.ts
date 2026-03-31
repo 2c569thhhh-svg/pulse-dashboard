@@ -1,4 +1,4 @@
-import type { Producer, ScanJob, OutreachEmail } from '@/types/database'
+import type { Producer, ScanJob, OutreachEmail, PubIntelligence } from '@/types/database'
 
 export const mockProducers: Producer[] = [
   {
@@ -8,8 +8,9 @@ export const mockProducers: Producer[] = [
     ipi_number: '00523847291',
     pro: 'ASCAP',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
     outreach_status: 'PENDING',
-    ai_score: 87,
+    ai_score: 102, // +15 Prime Target bonus
     priority: 'HIGH',
     estimated_monthly_royalties: 4200,
     instagram: '@treonthebeat',
@@ -21,6 +22,11 @@ export const mockProducers: Producer[] = [
     top_song: 'Back in Blood',
     reasoning: 'High-stream catalog with no publisher — significant uncollected performance royalties',
     notes: null,
+    last_verified_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3h ago
+    human_verified: true,
+    double_verified: true,
+    days_in_db: 3,
+    opens_count: 0,
   },
   {
     id: '2',
@@ -29,6 +35,7 @@ export const mockProducers: Producer[] = [
     ipi_number: '00847362910',
     pro: 'BMI',
     publisher_status: 'SELF_PUBLISHED',
+    pub_intelligence: 'SELF_PUBLISHED_NOT_COLLECTING' as PubIntelligence,
     outreach_status: 'PENDING',
     ai_score: 74,
     priority: 'HIGH',
@@ -42,6 +49,10 @@ export const mockProducers: Producer[] = [
     top_song: 'Pop Out',
     reasoning: 'Self-published — missing sync and international mechanical royalties',
     notes: null,
+    last_verified_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    human_verified: false,
+    days_in_db: 8,
+    opens_count: 0,
   },
   {
     id: '3',
@@ -50,8 +61,9 @@ export const mockProducers: Producer[] = [
     ipi_number: '00391847562',
     pro: 'ASCAP',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
     outreach_status: 'APPROVED',
-    ai_score: 91,
+    ai_score: 106, // +15 Prime Target bonus
     priority: 'HIGH',
     estimated_monthly_royalties: 6100,
     instagram: '@roarkbailey',
@@ -63,6 +75,11 @@ export const mockProducers: Producer[] = [
     top_song: 'Heart on Ice',
     reasoning: 'Mega-stream song with no publisher — highest priority lead in pipeline',
     notes: 'Very responsive on Instagram',
+    last_verified_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6h ago
+    human_verified: true,
+    double_verified: true,
+    days_in_db: 5,
+    opens_count: 0,
   },
   {
     id: '4',
@@ -71,8 +88,9 @@ export const mockProducers: Producer[] = [
     ipi_number: '00748291037',
     pro: 'BMI',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
     outreach_status: 'SENT',
-    ai_score: 68,
+    ai_score: 83, // +15 Prime Target bonus
     priority: 'MEDIUM',
     estimated_monthly_royalties: 1900,
     instagram: '@dhill_music',
@@ -84,6 +102,10 @@ export const mockProducers: Producer[] = [
     top_song: 'Free Me',
     reasoning: 'Solid streams, multiple placements — good candidate for admin deal',
     notes: null,
+    last_verified_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    human_verified: false,
+    days_in_db: 14,
+    opens_count: 0,
   },
   {
     id: '5',
@@ -92,6 +114,7 @@ export const mockProducers: Producer[] = [
     ipi_number: '00293847561',
     pro: 'ASCAP',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'SELF_COLLECTING' as PubIntelligence,
     outreach_status: 'OPENED',
     ai_score: 82,
     priority: 'HIGH',
@@ -105,6 +128,10 @@ export const mockProducers: Producer[] = [
     top_song: 'Sold Out Dates',
     reasoning: 'Deep catalog with major artist placements — high lifetime royalty value',
     notes: 'Opened email twice — follow up',
+    last_verified_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+    human_verified: false,
+    days_in_db: 20,
+    opens_count: 2,
   },
   {
     id: '6',
@@ -113,6 +140,7 @@ export const mockProducers: Producer[] = [
     ipi_number: '00561829374',
     pro: 'BMI',
     publisher_status: 'SELF_PUBLISHED',
+    pub_intelligence: 'SELF_PUBLISHED_NOT_COLLECTING' as PubIntelligence,
     outreach_status: 'SKIPPED',
     ai_score: 45,
     priority: 'LOW',
@@ -126,6 +154,10 @@ export const mockProducers: Producer[] = [
     top_song: 'Said Sum',
     reasoning: 'Low catalog depth limits upside — revisit if they get more placements',
     notes: 'Skipped — too few songs',
+    last_verified_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
+    human_verified: false,
+    days_in_db: 32,
+    opens_count: 0,
   },
   {
     id: '7',
@@ -134,8 +166,9 @@ export const mockProducers: Producer[] = [
     ipi_number: '00192837465',
     pro: 'ASCAP',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
     outreach_status: 'REPLIED',
-    ai_score: 95,
+    ai_score: 110, // +15 Prime Target bonus
     priority: 'HIGH',
     estimated_monthly_royalties: 9200,
     instagram: '@wheezy',
@@ -147,6 +180,11 @@ export const mockProducers: Producer[] = [
     top_song: 'Drip Too Hard',
     reasoning: 'Highest value lead — massive catalog, top-tier artists, zero publisher coverage',
     notes: 'REPLIED — interested! Schedule call ASAP',
+    last_verified_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
+    human_verified: true,
+    double_verified: true,
+    days_in_db: 7,
+    opens_count: 5,
   },
   {
     id: '8',
@@ -155,8 +193,9 @@ export const mockProducers: Producer[] = [
     ipi_number: '00384756192',
     pro: 'BMI',
     publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
     outreach_status: 'PENDING',
-    ai_score: 79,
+    ai_score: 94, // +15 Prime Target bonus
     priority: 'HIGH',
     estimated_monthly_royalties: 3100,
     instagram: '@mexikodro',
@@ -168,6 +207,62 @@ export const mockProducers: Producer[] = [
     top_song: 'Jersey',
     reasoning: 'Consistent Future collaborator — valuable catalog with no publisher protection',
     notes: null,
+    last_verified_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4h ago
+    human_verified: true,
+    days_in_db: 2,
+    opens_count: 0,
+  },
+  {
+    id: '9',
+    created_at: '2024-01-10T10:00:00Z',
+    writer_name: 'DP Beats',
+    ipi_number: '00473829104',
+    pro: 'ASCAP',
+    publisher_status: 'NO_PUBLISHER',
+    pub_intelligence: 'TRULY_UNREPRESENTED' as PubIntelligence,
+    outreach_status: 'PENDING',
+    ai_score: 88,
+    priority: 'HIGH',
+    estimated_monthly_royalties: 4800,
+    instagram: '@dpbeats',
+    email: 'dp@beatsbydp.com',
+    twitter: null,
+    spotify_streams: 9100000,
+    catalog_count: 28,
+    associated_artists: ['NBA YoungBoy', 'Quando Rondo'],
+    top_song: 'Valuable Pain',
+    reasoning: 'Long-uncontacted high-value lead — deep NBA YoungBoy catalog with zero publisher coverage',
+    notes: null,
+    last_verified_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(), // 35 days ago
+    human_verified: false,
+    days_in_db: 37,
+    opens_count: 0,
+  },
+  {
+    id: '10',
+    created_at: '2024-01-08T10:00:00Z',
+    writer_name: 'Slade Da Monsta',
+    ipi_number: '00928473610',
+    pro: 'BMI',
+    publisher_status: 'SELF_PUBLISHED',
+    pub_intelligence: 'SELF_PUBLISHED_NOT_COLLECTING' as PubIntelligence,
+    outreach_status: 'PENDING',
+    ai_score: 79,
+    priority: 'MEDIUM',
+    estimated_monthly_royalties: 3200,
+    instagram: '@sladedamonsta',
+    email: null,
+    twitter: '@sladedamonsta',
+    spotify_streams: 6700000,
+    catalog_count: 15,
+    associated_artists: ['Gunna', 'Lil Keed'],
+    top_song: 'Dollaz on My Head',
+    reasoning: 'Self-published but missing international mechanicals and sync — strong candidate',
+    notes: null,
+    last_verified_at: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000).toISOString(), // 32 days ago
+    human_verified: false,
+    days_in_db: 33,
+    opens_count: 0,
   },
 ]
 

@@ -278,6 +278,82 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: translateX(200%); }
 }
 
+/* ─── GOLD SHIMMER (approve animation) ─────────────────────────────────────── */
+@keyframes goldShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.row-gold-flash {
+  animation: rowGoldPulse 1.2s ease-out forwards;
+}
+
+@keyframes rowGoldPulse {
+  0%   { background: rgba(201, 168, 76, 0);    box-shadow: none; }
+  15%  { background: rgba(201, 168, 76, 0.18); box-shadow: 0 0 24px rgba(201,168,76,0.25) inset; }
+  60%  { background: rgba(201, 168, 76, 0.12); box-shadow: 0 0 16px rgba(201,168,76,0.15) inset; }
+  100% { background: rgba(201, 168, 76, 0.06); box-shadow: none; }
+}
+
+/* Lead Claimed overlay text */
+.lead-claimed-overlay {
+  animation: leadClaimedAnim 0.8s ease-out forwards;
+}
+
+@keyframes leadClaimedAnim {
+  0%   { opacity: 0; transform: scale(0.85); }
+  20%  { opacity: 1; transform: scale(1.05); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* ─── AT-RISK ROW ───────────────────────────────────────────────────────────── */
+.at-risk-row td {
+  border-left: none !important;
+}
+.at-risk-row td:first-child {
+  border-left: 3px solid rgba(224, 82, 82, 0.6) !important;
+}
+
+/* ─── UNDER REVIEW badge ────────────────────────────────────────────────────── */
+.badge-under-review {
+  background: rgba(201, 168, 76, 0.14);
+  color: #C9A84C;
+  border: 1px solid rgba(201, 168, 76, 0.28);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ─── DOUBLE VERIFIED badge ─────────────────────────────────────────────────── */
+.badge-double-verified {
+  background: rgba(91, 141, 239, 0.12);
+  color: #5b8def;
+  border: 1px solid rgba(91, 141, 239, 0.25);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* ─── REPORT MODAL backdrop ─────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out;
+}
+
 /* ─── SYMBIOTE ORB ──────────────────────────────────────────────────────────── */
 
 /* Organic blob morph — shifts border-radius through 8 waypoints */
@@ -369,4 +445,93 @@ input[type="range"]::-webkit-slider-thumb:hover {
     0 0 0 1px rgba(155, 126, 248, 0.06),
     0 4px 32px rgba(0, 0, 0, 0.4),
     0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ─── ORB ANIMATIONS ────────────────────────────────────────────────────────── */
+@keyframes orbLiquid {
+  0%   { transform: rotate(0deg)   scale(1);    opacity: 0.6; }
+  33%  { transform: rotate(130deg) scale(1.12); opacity: 0.8; }
+  66%  { transform: rotate(250deg) scale(0.94); opacity: 0.5; }
+  100% { transform: rotate(360deg) scale(1);    opacity: 0.6; }
+}
+
+@keyframes orbShimmer {
+  0%   { opacity: 0.18; transform: rotate(-8deg)  scale(0.98); }
+  100% { opacity: 0.48; transform: rotate(8deg)   scale(1.02); }
+}
+
+@keyframes orbBreathe {
+  0%,100% { transform: scale(1);    opacity: 0.28; }
+  50%      { transform: scale(1.18); opacity: 0.48; }
+}
+
+@keyframes orbRing {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(1.85); opacity: 0;    }
+}
+
+@keyframes orbGoldPulse {
+  0%,100% { box-shadow:
+    inset -20px -20px 40px rgba(10,5,40,0.8),
+    inset 15px 15px 30px rgba(80,120,255,0.15),
+    0 0 40px rgba(80,100,255,0.3),
+    0 0 80px rgba(60,80,200,0.15),
+    0 20px 60px rgba(0,0,0,0.5); }
+  50%      { box-shadow:
+    inset -20px -20px 40px rgba(10,5,20,0.8),
+    inset 15px 15px 30px rgba(201,168,76,0.3),
+    0 0 60px rgba(201,168,76,0.5),
+    0 0 120px rgba(201,168,76,0.25),
+    0 20px 60px rgba(0,0,0,0.5); }
+}
+
+@keyframes particleFloat {
+  0%   { transform: translateY(0)    translateX(0);           opacity: 0.85; }
+  100% { transform: translateY(-70px) translateX(var(--px, 0px)); opacity: 0;    }
+}
+
+/* ─── TICKER ────────────────────────────────────────────────────────────────── */
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  white-space: nowrap;
+  animation: tickerScroll 28s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ─── CONFETTI ──────────────────────────────────────────────────────────────── */
+@keyframes confettiFall {
+  0%   { transform: translateY(-10px) rotate(0deg);   opacity: 1;   }
+  100% { transform: translateY(105vh)  rotate(740deg); opacity: 0.1; }
+}
+
+/* ─── TOAST ─────────────────────────────────────────────────────────────────── */
+@keyframes toastIn {
+  from { transform: translateX(110px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(110px); }
+}
+
+/* ─── MONEY SHIMMER BAR ──────────────────────────────────────────────────────── */
+@keyframes moneyShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%);  }
+}
+
+/* ─── PRODUCER BAR FILL ─────────────────────────────────────────────────────── */
+@keyframes barFill {
+  from { width: 0; }
+}
+
+/* ─── ROYALTY PULSE ─────────────────────────────────────────────────────────── */
+@keyframes royaltyPulse {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.04); color: #E2C97E; }
 }

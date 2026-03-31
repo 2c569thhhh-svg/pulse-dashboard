@@ -4,6 +4,30 @@ export type Priority = 'HIGH' | 'MEDIUM' | 'LOW'
 export type EmailStatus = 'DRAFT' | 'APPROVED' | 'SENT' | 'OPENED' | 'CLICKED' | 'REPLIED'
 export type JobStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'QUEUED'
 
+// Item 2: Enhanced publisher intelligence
+export type PubIntelligence =
+  | 'TRULY_UNREPRESENTED'
+  | 'SELF_COLLECTING'
+  | 'SELF_PUBLISHED_NOT_COLLECTING'
+  | 'UNKNOWN'
+
+// Item 3: Outreach voice settings
+export interface OutreachVoice {
+  tone: 'professional' | 'warm' | 'direct' | 'industry_insider'
+  company_name: string
+  sender_name: string
+  signature: string
+  bio: string
+}
+
+export type ReportReason =
+  | 'IS_PUBLISHED'
+  | 'SELF_COLLECTING'
+  | 'WRONG_CONTACT'
+  | 'OTHER'
+
+export type ReportStatus = 'NONE' | 'UNDER_REVIEW' | 'RESOLVED'
+
 export interface Producer {
   id: string
   created_at: string
@@ -11,6 +35,7 @@ export interface Producer {
   ipi_number: string | null
   pro: string | null
   publisher_status: PublisherStatus
+  pub_intelligence?: PubIntelligence
   outreach_status: OutreachStatus
   ai_score: number | null
   priority: Priority | null
@@ -24,6 +49,14 @@ export interface Producer {
   top_song: string | null
   reasoning: string | null
   notes: string | null
+  last_verified_at?: string
+  human_verified?: boolean
+  double_verified?: boolean
+  under_review?: boolean
+  report_status?: ReportStatus
+  report_reason?: ReportReason
+  days_in_db?: number
+  opens_count?: number
 }
 
 export interface Song {
@@ -51,6 +84,7 @@ export interface OutreachEmail {
   created_at: string
   producer_id: string
   subject: string
+  subject_b?: string
   body: string
   status: EmailStatus
   sent_at: string | null
@@ -59,6 +93,8 @@ export interface OutreachEmail {
   replied_at: string | null
   template_used: string | null
   sendgrid_message_id: string | null
+  opens_count?: number
+  variant_winner?: 'A' | 'B'
 }
 
 export interface ScanJob {
