@@ -421,3 +421,283 @@ export const mockStats = {
   producersSigned: 3,
   songsScanned: 847,
 }
+
+// ─── CATALOG MONITORING ───────────────────────────────────────────────────────
+
+export type AlertType = 'COMPETITOR' | 'TRENDING' | 'PLACEMENT' | 'VIRAL' | 'MILESTONE' | 'NEW_RELEASE'
+
+export interface MonitoringAlert {
+  id: string
+  type: AlertType
+  producerName: string
+  producerId: string
+  title: string
+  description: string
+  timestampMs: number        // ms ago from now
+  read: boolean
+  urgency: 'critical' | 'high' | 'medium' | 'low'
+  // Extra contextual data
+  artist?: string
+  song?: string
+  streamDelta?: string        // e.g. "+2.1M streams in 48h"
+  competitor?: string
+  chartPosition?: string
+  placementCount?: number
+}
+
+export interface WatchedProducer {
+  id: string
+  name: string
+  artists: string[]
+  monthlyStreams: number
+  streamTrend: number[]       // last 7 data points (sparkline)
+  trendDirection: 'up' | 'down' | 'flat'
+  trendPct: string            // e.g. "+34%"
+  alertsThisWeek: number
+  placementsThisMonth: number
+  isFirstToWatch: boolean
+  signed: boolean             // already signed by this publisher
+  watchedSince: string        // relative
+  lastActivity: string        // relative
+  streakDays?: number         // consecutive days with activity
+  streakLabel?: string
+}
+
+const now = Date.now()
+const minsAgo  = (m: number) => now - m * 60_000
+const hoursAgo = (h: number) => now - h * 3_600_000
+const daysAgo  = (d: number) => now - d * 86_400_000
+
+export const mockAlerts: MonitoringAlert[] = [
+  {
+    id: 'a1',
+    type: 'COMPETITOR',
+    producerName: 'TreOnTheBeat',
+    producerId: '1',
+    title: 'Competitor Approaching',
+    description: 'Warner Chappell rep was seen in contact with TreOnTheBeat\'s manager. Window is closing.',
+    timestampMs: minsAgo(14),
+    read: false,
+    urgency: 'critical',
+    artist: 'Lil Durk',
+    competitor: 'Warner Chappell',
+  },
+  {
+    id: 'a2',
+    type: 'VIRAL',
+    producerName: 'Maaly Raw',
+    producerId: '3',
+    title: 'Going Viral on TikTok',
+    description: '"Stick" beat is trending on TikTok — 4.2M video creations in 72h. Stream velocity spiking.',
+    timestampMs: minsAgo(47),
+    read: false,
+    urgency: 'high',
+    artist: 'Drake',
+    song: 'Stick',
+    streamDelta: '+4.2M streams in 72h',
+  },
+  {
+    id: 'a3',
+    type: 'PLACEMENT',
+    producerName: 'Wheezy',
+    producerId: '2',
+    title: 'New Major Placement',
+    description: 'New placement confirmed on Future\'s upcoming album "MAGIC 3" — tracklist leaked.',
+    timestampMs: hoursAgo(2),
+    read: false,
+    urgency: 'high',
+    artist: 'Future',
+    song: 'MAGIC 3 (Track 4)',
+    placementCount: 8,
+  },
+  {
+    id: 'a4',
+    type: 'TRENDING',
+    producerName: 'Pi\'erre Bourne',
+    producerId: '7',
+    title: 'Stream Spike Detected',
+    description: 'Playboi Carti\'s "New Tank" trending — catalog streams up 340% in 48h.',
+    timestampMs: hoursAgo(3),
+    read: false,
+    urgency: 'high',
+    artist: 'Playboi Carti',
+    streamDelta: '+340% in 48h',
+  },
+  {
+    id: 'a5',
+    type: 'COMPETITOR',
+    producerName: 'DP Beats',
+    producerId: '9',
+    title: 'Competitor Signed',
+    description: 'Sony Music Publishing closed with DP Beats — deal announced this morning. Lead lost.',
+    timestampMs: hoursAgo(5),
+    read: false,
+    urgency: 'critical',
+    artist: 'NBA YoungBoy',
+    competitor: 'Sony Music Publishing',
+  },
+  {
+    id: 'a6',
+    type: 'MILESTONE',
+    producerName: 'TreOnTheBeat',
+    producerId: '1',
+    title: '🏆 500M Streams Milestone',
+    description: 'TreOnTheBeat\'s catalog crossed 500M total Spotify streams. Uncollected royalties growing.',
+    timestampMs: hoursAgo(8),
+    read: true,
+    urgency: 'medium',
+    streamDelta: '500M total streams',
+  },
+  {
+    id: 'a7',
+    type: 'NEW_RELEASE',
+    producerName: 'Maaly Raw',
+    producerId: '3',
+    title: 'New Release Friday',
+    description: '2 new Drake collabs dropped — both unregistered with any PRO. Fresh unclaimed royalties.',
+    timestampMs: hoursAgo(12),
+    read: true,
+    urgency: 'medium',
+    artist: 'Drake',
+    song: 'Nokia / Sticky',
+  },
+  {
+    id: 'a8',
+    type: 'PLACEMENT',
+    producerName: 'Slade Da Monsta',
+    producerId: '10',
+    title: 'Gunna Album Confirmation',
+    description: '3 placements confirmed on Gunna\'s "a gift & a curse 2". No publishing deal in place.',
+    timestampMs: hoursAgo(18),
+    read: true,
+    urgency: 'high',
+    artist: 'Gunna',
+    placementCount: 3,
+  },
+  {
+    id: 'a9',
+    type: 'TRENDING',
+    producerName: 'Pi\'erre Bourne',
+    producerId: '7',
+    title: 'Billboard Hot 100 Entry',
+    description: '"New Tank" enters the Hot 100 at #47. Publishing royalties will accrue this quarter.',
+    timestampMs: daysAgo(1),
+    read: true,
+    urgency: 'low',
+    chartPosition: '#47 Hot 100',
+  },
+  {
+    id: 'a10',
+    type: 'VIRAL',
+    producerName: 'Wheezy',
+    producerId: '2',
+    title: 'YouTube Trending #3',
+    description: 'Future\'s "WAIT FOR U" (prod. Wheezy) hit YouTube Trending #3 — 8.1M views in 24h.',
+    timestampMs: daysAgo(2),
+    read: true,
+    urgency: 'low',
+    artist: 'Future',
+    streamDelta: '8.1M YouTube views',
+  },
+]
+
+export const mockWatchedProducers: WatchedProducer[] = [
+  {
+    id: '1',
+    name: 'TreOnTheBeat',
+    artists: ['Lil Durk', 'EST Gee', 'Polo G'],
+    monthlyStreams: 8_400_000,
+    streamTrend: [62, 68, 71, 69, 78, 91, 102],
+    trendDirection: 'up',
+    trendPct: '+34%',
+    alertsThisWeek: 3,
+    placementsThisMonth: 5,
+    isFirstToWatch: true,
+    signed: false,
+    watchedSince: '18 days ago',
+    lastActivity: '14 min ago',
+    streakDays: 12,
+    streakLabel: '12-day streak',
+  },
+  {
+    id: '3',
+    name: 'Maaly Raw',
+    artists: ['Drake', '21 Savage', 'Lil Baby'],
+    monthlyStreams: 22_000_000,
+    streamTrend: [88, 92, 87, 95, 110, 124, 138],
+    trendDirection: 'up',
+    trendPct: '+57%',
+    alertsThisWeek: 2,
+    placementsThisMonth: 3,
+    isFirstToWatch: false,
+    signed: false,
+    watchedSince: '6 days ago',
+    lastActivity: '47 min ago',
+    streakDays: 6,
+    streakLabel: '6-day streak',
+  },
+  {
+    id: '2',
+    name: 'Wheezy',
+    artists: ['Future', 'Young Thug', 'Drake'],
+    monthlyStreams: 31_000_000,
+    streamTrend: [95, 98, 94, 100, 97, 103, 108],
+    trendDirection: 'up',
+    trendPct: '+12%',
+    alertsThisWeek: 2,
+    placementsThisMonth: 8,
+    isFirstToWatch: true,
+    signed: false,
+    watchedSince: '31 days ago',
+    lastActivity: '2h ago',
+    streakDays: 31,
+    streakLabel: '31-day streak 🔥',
+  },
+  {
+    id: '7',
+    name: "Pi'erre Bourne",
+    artists: ['Playboi Carti', 'Young Nudy', 'SoFaygo'],
+    monthlyStreams: 18_500_000,
+    streamTrend: [55, 58, 54, 60, 72, 88, 101],
+    trendDirection: 'up',
+    trendPct: '+83%',
+    alertsThisWeek: 2,
+    placementsThisMonth: 4,
+    isFirstToWatch: false,
+    signed: false,
+    watchedSince: '9 days ago',
+    lastActivity: '3h ago',
+  },
+  {
+    id: '10',
+    name: 'Slade Da Monsta',
+    artists: ['Gunna', 'Young Thug'],
+    monthlyStreams: 9_200_000,
+    streamTrend: [40, 44, 41, 48, 52, 58, 64],
+    trendDirection: 'up',
+    trendPct: '+28%',
+    alertsThisWeek: 1,
+    placementsThisMonth: 3,
+    isFirstToWatch: true,
+    signed: false,
+    watchedSince: '33 days ago',
+    lastActivity: '18h ago',
+    streakDays: 8,
+    streakLabel: '8-day streak',
+  },
+  {
+    id: '4',
+    name: 'BabyOnTheBeat',
+    artists: ['Roddy Ricch', 'Lil Baby'],
+    monthlyStreams: 6_100_000,
+    streamTrend: [72, 70, 68, 67, 65, 63, 61],
+    trendDirection: 'down',
+    trendPct: '-15%',
+    alertsThisWeek: 0,
+    placementsThisMonth: 1,
+    isFirstToWatch: false,
+    signed: true,   // already signed
+    watchedSince: '4 months ago',
+    lastActivity: '3 days ago',
+  },
+]

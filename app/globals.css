@@ -535,3 +535,106 @@ input[type="range"]::-webkit-slider-thumb:hover {
   0%,100% { transform: scale(1); }
   50%      { transform: scale(1.04); color: #E2C97E; }
 }
+
+/* ─── CATALOG MONITORING ─────────────────────────────────────────────────────── */
+
+/* Alert card slide-in from right */
+@keyframes alertSlideIn {
+  from { opacity: 0; transform: translateX(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+.alert-slide-in { animation: alertSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* Alert card dismiss */
+@keyframes alertDismiss {
+  to { opacity: 0; transform: translateX(24px) scale(0.96); max-height: 0; margin: 0; padding: 0; }
+}
+.alert-dismiss { animation: alertDismiss 0.22s ease-in forwards; }
+
+/* Pulsing red dot for new alerts */
+@keyframes alertDotPulse {
+  0%,100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(241,96,96,0.5); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(241,96,96,0); }
+}
+.alert-dot { animation: alertDotPulse 1.8s ease-in-out infinite; }
+
+/* Competitor urgent flash — red border pulse */
+@keyframes competitorFlash {
+  0%,100% { border-left-color: rgba(241,96,96,0.55); }
+  50%      { border-left-color: rgba(241,96,96,1);    box-shadow: -3px 0 16px rgba(241,96,96,0.25); }
+}
+.alert-competitor { animation: competitorFlash 2s ease-in-out infinite; }
+
+/* Trending fire shimmer */
+@keyframes trendingGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(224,139,82,0); }
+  50%      { box-shadow: 0 0 20px rgba(224,139,82,0.18); }
+}
+.alert-trending { animation: trendingGlow 2.4s ease-in-out infinite; }
+
+/* Viral purple pulse */
+@keyframes viralPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(155,126,248,0); }
+  50%      { box-shadow: 0 0 20px rgba(155,126,248,0.2); }
+}
+.alert-viral { animation: viralPulse 2.2s ease-in-out infinite; }
+
+/* "NEW" badge bounce */
+@keyframes newBadgeBounce {
+  0%,80%,100% { transform: scale(1);    }
+  40%          { transform: scale(1.18); }
+}
+.new-badge { animation: newBadgeBounce 2s ease-in-out infinite; }
+
+/* Sidebar notification badge pop */
+@keyframes badgePop {
+  0%  { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100%{ transform: scale(1);   opacity: 1; }
+}
+.badge-pop { animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+/* Stat counter count-up feel */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-up { animation: countUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Streak fire glow */
+@keyframes streakGlow {
+  0%,100% { text-shadow: 0 0 8px rgba(224,139,82,0.6); }
+  50%      { text-shadow: 0 0 18px rgba(224,139,82,1), 0 0 32px rgba(224,139,82,0.4); }
+}
+.streak-fire { animation: streakGlow 1.6s ease-in-out infinite; }
+
+/* "First to Watch" shimmer badge */
+@keyframes exclusiveShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.badge-exclusive {
+  background: linear-gradient(90deg, rgba(201,168,76,0.15) 0%, rgba(226,201,126,0.38) 40%, rgba(201,168,76,0.15) 80%);
+  background-size: 200% auto;
+  animation: exclusiveShimmer 3s linear infinite;
+  color: #E2C97E;
+  border: 1px solid rgba(201,168,76,0.3);
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  letter-spacing: 0.05em; white-space: nowrap;
+}
+
+/* Watch button hover ring */
+.watch-btn-active {
+  box-shadow: 0 0 0 0 rgba(62,207,142,0);
+  animation: watchPing 2.5s ease-out infinite;
+}
+@keyframes watchPing {
+  0%   { box-shadow: 0 0 0 0 rgba(62,207,142,0.4); }
+  70%  { box-shadow: 0 0 0 7px rgba(62,207,142,0); }
+  100% { box-shadow: 0 0 0 0 rgba(62,207,142,0); }
+}
+
+/* Number pill pop on hover */
+.stat-pill { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.stat-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+

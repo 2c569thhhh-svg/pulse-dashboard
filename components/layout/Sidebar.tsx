@@ -4,7 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-const navMain = [
+type NavItem = {
+  href: string
+  label: string
+  badge?: string
+  badgeColor?: string
+  icon: React.ReactNode
+}
+
+const navMain: NavItem[] = [
   {
     href: '/dashboard',
     label: 'Command Center',
@@ -60,9 +68,21 @@ const navMain = [
       </svg>
     ),
   },
+  {
+    href: '/monitoring',
+    label: 'Monitor',
+    badge: '5',
+    badgeColor: '#f16060',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    ),
+  },
 ]
 
-const navBottom = [
+const navBottom: NavItem[] = [
   {
     href: '/settings',
     label: 'Settings',
@@ -82,7 +102,7 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')
 
-  const navLink = (item: typeof navMain[0]) => {
+  const navLink = (item: NavItem) => {
     const active = isActive(item.href)
     return (
       <Link
@@ -145,13 +165,15 @@ export default function Sidebar() {
         {!collapsed && item.badge && (
           <span style={{
             fontSize: 9,
-            fontWeight: 700,
-            background: 'rgba(201,168,76,0.15)',
-            color: 'var(--gold)',
+            fontWeight: 800,
+            background: item.badgeColor ? `${item.badgeColor}22` : 'rgba(201,168,76,0.15)',
+            color: item.badgeColor ?? 'var(--gold)',
             padding: '1.5px 6px',
             borderRadius: 99,
-            letterSpacing: '0.05em',
-            border: '1px solid rgba(201,168,76,0.25)',
+            letterSpacing: '0.04em',
+            border: `1px solid ${item.badgeColor ? `${item.badgeColor}44` : 'rgba(201,168,76,0.25)'}`,
+            minWidth: 18,
+            textAlign: 'center',
           }}>
             {item.badge}
           </span>
