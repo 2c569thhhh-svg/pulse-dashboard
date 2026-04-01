@@ -103,38 +103,45 @@ export async function POST(req: NextRequest) {
     try {
       const { artist, songs, leads } = await scanArtistForLeads(name)
 
-      // Persist leads
-      for (const lead of leads) {
-        try {
-          await supabase.from('producers').upsert({
-            writer_name: lead.writer_name,
-            ipi_number: lead.ipi_number,
-            pro: lead.pro,
-            publisher_status: lead.publisher_status,
-            outreach_status: 'PENDING',
-            associated_artists: [lead.associated_artist],
-            top_song: lead.song_title,
-          }, { onConflict: 'ipi_number' })
-        } catch { /* non-critical */ }
-      }
+      // If Soundcharts returned songs but no writer credit data, fall through to MusicBrainz
+      // (credits endpoint may not be populated on this plan tier)
+      if (songs.length > 0 && leads.length === 0) {
+        console.log('[scan] Soundcharts returned no leads (credits data absent), trying MusicBrainz')
+        // fall through
+      } else {
+        // Persist leads
+        for (const lead of leads) {
+          try {
+            await supabase.from('producers').upsert({
+              writer_name: lead.writer_name,
+              ipi_number: lead.ipi_number,
+              pro: lead.pro,
+              publisher_status: lead.publisher_status,
+              outreach_status: 'PENDING',
+              associated_artists: [lead.associated_artist],
+              top_song: lead.song_title,
+            }, { onConflict: 'ipi_number' })
+          } catch { /* non-critical */ }
+        }
 
-      if (jobId) {
-        try {
-          await supabase.from('scan_jobs').update({
-            status: 'COMPLETED', completed_at: new Date().toISOString(),
-            songs_scanned: songs.length, leads_found: leads.length,
-          }).eq('id', jobId)
-        } catch { /* non-critical */ }
-      }
+        if (jobId) {
+          try {
+            await supabase.from('scan_jobs').update({
+              status: 'COMPLETED', completed_at: new Date().toISOString(),
+              songs_scanned: songs.length, leads_found: leads.length,
+            }).eq('id', jobId)
+          } catch { /* non-critical */ }
+        }
 
-      return NextResponse.json({
-        success: true,
-        artist: artist.name,
-        songsScanned: songs.length,
-        leadsFound: leads.length,
-        leads,
-        source: 'soundcharts',
-      })
+        return NextResponse.json({
+          success: true,
+          artist: artist.name,
+          songsScanned: songs.length,
+          leadsFound: leads.length,
+          leads,
+          source: 'soundcharts',
+        })
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Soundcharts error'
       console.error('[scan] Soundcharts failed, trying MusicBrainz:', msg)

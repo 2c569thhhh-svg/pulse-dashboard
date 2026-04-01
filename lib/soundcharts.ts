@@ -1,23 +1,45 @@
+/**
+ * Soundcharts Customer API v2
+ * Base: https://customer.api.soundcharts.com
+ * Auth: x-app-id + x-api-key headers
+ */
+
 const SOUNDCHARTS_BASE = 'https://customer.api.soundcharts.com'
-const APP_ID = process.env.SOUNDCHARTS_APP_ID || 'soundcharts'
+const APP_ID = process.env.SOUNDCHARTS_APP_ID || ''
 const API_KEY = process.env.SOUNDCHARTS_API_TOKEN || ''
 
 function getHeaders(): Record<string, string> {
   return {
     'x-app-id': APP_ID,
     'x-api-key': API_KEY,
-    'Content-Type': 'application/json',
+    'Accept': 'application/json',
   }
 }
 
 async function scFetch(path: string) {
   const url = `${SOUNDCHARTS_BASE}${path}`
-  const res = await fetch(url, { headers: getHeaders() })
+  const res = await fetch(url, {
+    headers: getHeaders(),
+    next: { revalidate: 0 },
+  })
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Soundcharts API error ${res.status}: ${text}`)
+    const text = await res.text().catch(() => '')
+    throw new Error(`Soundcharts ${res.status} ${res.statusText}: ${path} — ${text.slice(0, 200)}`)
   }
   return res.json()
+}
+
+// Try multiple path variants — returns first that succeeds, or throws
+async function scFetchFirst(paths: string[]) {
+  let lastErr: Error | null = null
+  for (const path of paths) {
+    try {
+      return await scFetch(path)
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e))
+    }
+  }
+  throw lastErr
 }
 
 export interface SCArtist {
@@ -25,118 +47,183 @@ export interface SCArtist {
   name: string
   appUrl?: string
   countryCode?: string
+  slug?: string
 }
 
 export interface SCSong {
   uuid: string
   name: string
+  title?: string
   isrc?: string
   releaseDate?: string
 }
 
-export interface SCSongMetadata {
+// A writer/credit entry as returned by Soundcharts song metadata or credits endpoint
+export interface SCWriter {
+  name: string
+  ipi?: string | null
+  pro?: string | null
+  // publisher field — may be a string name, an object, or absent
+  publisher?: string | { name: string } | null
+  role?: string
+}
+
+export interface SCSongDetail {
   uuid: string
   name: string
+  title?: string
   isrc?: string
-  writers?: Array<{
-    name: string
-    ipi?: string
-    pro?: string
-    publisher?: string | null
-  }>
+  // Various possible shapes Soundcharts returns for credits
+  writers?: SCWriter[]
+  credits?: SCWriter[]
+  contributors?: SCWriter[]
+  composers?: SCWriter[]
 }
 
-export interface SCPublisher {
-  name: string | null
-  ipi?: string
-}
-
-// Search artists by name
+// ── Artist search ─────────────────────────────────────────────────────────────
 export async function searchArtist(term: string, limit = 5): Promise<SCArtist[]> {
   const data = await scFetch(`/api/v2/artist/search?term=${encodeURIComponent(term)}&limit=${limit}`)
-  return data.items || data.artists || []
+  // Response may be { items: [] } or { artists: [] } or { data: [] }
+  return data.items ?? data.artists ?? data.data ?? []
 }
 
-// Get songs for an artist
+// ── Artist songs ──────────────────────────────────────────────────────────────
 export async function getArtistSongs(uuid: string, limit = 20): Promise<SCSong[]> {
-  const data = await scFetch(`/api/v2/artist/${uuid}/songs?limit=${limit}`)
-  return data.items || data.songs || []
+  const data = await scFetch(`/api/v2/artist/${encodeURIComponent(uuid)}/songs?limit=${limit}`)
+  return data.items ?? data.songs ?? data.data ?? []
 }
 
-// Look up song by ISRC
-export async function getSongByISRC(isrc: string): Promise<SCSong | null> {
-  const data = await scFetch(`/api/v2/song/by-isrc?isrc=${encodeURIComponent(isrc)}`)
-  return data.object || data.song || null
-}
-
-// Get song metadata including writers
-export async function getSongMetadata(uuid: string): Promise<SCSongMetadata | null> {
-  const data = await scFetch(`/api/v2/song/${uuid}/metadata`)
-  return data.object || data.song || null
-}
-
-// Look up publisher by IPI number — THE MONEY CHECK
-export async function getPublisherByIPI(ipi: string): Promise<SCPublisher | null> {
+// ── Song metadata / credits ───────────────────────────────────────────────────
+// Tries both /credits and /metadata path variants
+export async function getSongDetail(uuid: string): Promise<SCSongDetail | null> {
   try {
-    const data = await scFetch(`/api/v2/publisher/by-ipi?ipi=${encodeURIComponent(ipi)}`)
-    return data.object || data.publisher || null
+    const data = await scFetchFirst([
+      `/api/v2/song/${encodeURIComponent(uuid)}/credits`,
+      `/api/v2/song/${encodeURIComponent(uuid)}/metadata`,
+    ])
+    // Normalise: unwrap object/song envelope
+    const detail = data.object ?? data.song ?? data.data ?? data
+    return detail as SCSongDetail
   } catch {
     return null
   }
 }
 
-// Get Spotify top chart
-export async function getSpotifyTopChart(genre = 'rap', limit = 50) {
-  const data = await scFetch(`/api/v2/chart/spotify/top?genre=${genre}&limit=${limit}`)
-  return data.items || data.songs || []
+// Resolve the publisher name from whatever shape SC returns
+function resolvePublisher(pub: SCWriter['publisher']): string | null {
+  if (!pub) return null
+  if (typeof pub === 'string') return pub.trim() || null
+  if (typeof pub === 'object' && pub !== null && 'name' in pub) return (pub as { name: string }).name?.trim() || null
+  return null
 }
 
-// Full pipeline: search artist → get songs → check each writer's publisher status
+// Extract writers from the various field names SC might use
+function extractWriters(detail: SCSongDetail): SCWriter[] {
+  return detail.writers ?? detail.credits ?? detail.contributors ?? detail.composers ?? []
+}
+
+// ── Diagnostic: raw fetch for test endpoint ───────────────────────────────────
+export async function fetchRaw(path: string) {
+  try {
+    const data = await scFetch(path)
+    return { ok: true, data }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+// ── Compatibility aliases (used by new-releases route) ───────────────────────
+export async function getSongByISRC(isrc: string): Promise<SCSong | null> {
+  try {
+    const data = await scFetch(`/api/v2/song/by-isrc?isrc=${encodeURIComponent(isrc)}`)
+    return data.object ?? data.song ?? data.data ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function getSongMetadata(uuid: string): Promise<SCSongDetail | null> {
+  return getSongDetail(uuid)
+}
+
+export async function getPublisherByIPI(ipi: string): Promise<{ name: string | null } | null> {
+  // This endpoint likely doesn't exist in Soundcharts — returns null gracefully
+  try {
+    const data = await scFetch(`/api/v2/publisher/by-ipi?ipi=${encodeURIComponent(ipi)}`)
+    return data.object ?? data.publisher ?? null
+  } catch {
+    return null
+  }
+}
+
+// ── Full scan pipeline ────────────────────────────────────────────────────────
 export async function scanArtistForLeads(artistName: string) {
-  console.log(`[Soundcharts] Scanning ${artistName}...`)
+  console.log(`[Soundcharts] Scanning "${artistName}"...`)
 
   // 1. Find artist
-  const artists = await searchArtist(artistName, 1)
-  if (!artists.length) {
-    throw new Error(`Artist not found: ${artistName}`)
-  }
+  const artists = await searchArtist(artistName, 3)
+  if (!artists.length) throw new Error(`Artist not found in Soundcharts: "${artistName}"`)
+
   const artist = artists[0]
-  console.log(`[Soundcharts] Found artist: ${artist.name} (${artist.uuid})`)
+  console.log(`[Soundcharts] Artist: ${artist.name} (${artist.uuid})`)
 
-  // 2. Get their songs
+  // 2. Get songs
   const songs = await getArtistSongs(artist.uuid, 20)
-  console.log(`[Soundcharts] Found ${songs.length} songs`)
+  if (!songs.length) throw new Error(`No songs found for "${artist.name}"`)
+  console.log(`[Soundcharts] Songs found: ${songs.length}`)
 
-  const leads = []
+  const leads: Array<{
+    writer_name: string
+    ipi_number: string | null
+    pro: string | null
+    publisher_status: 'NO_PUBLISHER'
+    song_title: string
+    song_uuid: string
+    isrc: string | null
+    associated_artist: string
+  }> = []
 
-  // 3. For each song, get metadata and check writers
-  for (const song of songs.slice(0, 10)) {
+  const seenWriters = new Set<string>()
+
+  // 3. For each song, get credits and find unaffiliated writers
+  for (const song of songs.slice(0, 12)) {
     try {
-      const metadata = await getSongMetadata(song.uuid)
-      if (!metadata?.writers?.length) continue
+      const detail = await getSongDetail(song.uuid)
+      if (!detail) continue
 
-      for (const writer of metadata.writers) {
-        if (!writer.ipi) continue
+      const writers = extractWriters(detail)
+      if (!writers.length) continue
 
-        const publisher = await getPublisherByIPI(writer.ipi)
-        const hasPublisher = publisher && publisher.name && publisher.name.trim() !== ''
+      const songTitle = detail.name ?? detail.title ?? song.name ?? song.title ?? 'Unknown'
+      console.log(`[Soundcharts] Song "${songTitle}" — ${writers.length} writer(s)`)
 
-        if (!hasPublisher) {
+      for (const writer of writers) {
+        if (!writer.name) continue
+        const key = writer.ipi ?? writer.name.toLowerCase()
+        if (seenWriters.has(key)) continue
+
+        const publisher = resolvePublisher(writer.publisher)
+
+        // A writer is a lead if they have NO publisher affiliation
+        if (!publisher) {
+          seenWriters.add(key)
           leads.push({
             writer_name: writer.name,
-            ipi_number: writer.ipi,
-            pro: writer.pro || null,
-            publisher_status: 'NO_PUBLISHER' as const,
-            song_title: metadata.name,
-            song_uuid: metadata.uuid,
-            isrc: metadata.isrc || null,
+            ipi_number: writer.ipi ?? null,
+            pro: writer.pro ?? null,
+            publisher_status: 'NO_PUBLISHER',
+            song_title: songTitle,
+            song_uuid: song.uuid,
+            isrc: detail.isrc ?? song.isrc ?? null,
             associated_artist: artist.name,
           })
-          console.log(`[Soundcharts] LEAD FOUND: ${writer.name} — no publisher on "${metadata.name}"`)
+          console.log(`[Soundcharts] LEAD: ${writer.name} — no publisher on "${songTitle}"`)
+        } else {
+          console.log(`[Soundcharts] SKIP: ${writer.name} — has publisher: ${publisher}`)
         }
       }
     } catch (err) {
-      console.error(`[Soundcharts] Error processing song ${song.uuid}:`, err)
+      console.error(`[Soundcharts] Error on song ${song.uuid}:`, err instanceof Error ? err.message : err)
     }
   }
 

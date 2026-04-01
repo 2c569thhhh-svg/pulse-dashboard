@@ -106,7 +106,7 @@ export async function GET() {
               const meta = await getSongMetadata(song.uuid)
               if (meta?.writers?.length) {
                 writers = await Promise.all(
-                  meta.writers.map(async (w) => ({
+                  meta.writers.map(async (w: { name: string; ipi?: string | null; pro?: string | null }) => ({
                     name: w.name,
                     ipi: w.ipi ?? null,
                     pro: w.pro ?? null,

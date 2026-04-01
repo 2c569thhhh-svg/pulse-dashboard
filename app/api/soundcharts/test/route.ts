@@ -1,53 +1,77 @@
 import { NextResponse } from 'next/server'
-import { searchArtist, getArtistSongs, getSongByISRC, getSongMetadata, getPublisherByIPI } from '@/lib/soundcharts'
+import { searchArtist, getArtistSongs, getSongDetail, fetchRaw } from '@/lib/soundcharts'
 
 // GET /api/soundcharts/test
-// Quick integration test — hits the real Soundcharts API and returns results
+// Diagnostic endpoint — shows exactly what Soundcharts returns at each step
 export async function GET() {
-  const results: Record<string, unknown> = {}
+  const appId = process.env.SOUNDCHARTS_APP_ID
+  const apiKey = process.env.SOUNDCHARTS_API_TOKEN
+
+  const results: Record<string, unknown> = {
+    credentials: {
+      app_id_set: !!appId,
+      api_key_set: !!apiKey,
+      app_id: appId ? `${appId.slice(0, 8)}...` : null,
+    },
+  }
+
+  if (!apiKey) {
+    return NextResponse.json({
+      success: false,
+      error: 'SOUNDCHARTS_API_TOKEN not set',
+      results,
+    }, { status: 500 })
+  }
 
   try {
-    // Step 1: Search for Lil Durk
-    const artists = await searchArtist('Lil Durk', 1)
-    results.artist = artists[0] || null
+    // Step 1: Artist search
+    const artists = await searchArtist('Drake', 2)
+    results.step1_artist_search = {
+      count: artists.length,
+      first: artists[0] ?? null,
+      raw_shape: artists[0] ? Object.keys(artists[0]) : [],
+    }
 
     if (!artists[0]) {
-      return NextResponse.json({ error: 'Artist not found', results })
+      return NextResponse.json({ success: false, error: 'Artist search returned nothing', results })
     }
 
-    // Step 2: Get their songs
-    const songs = await getArtistSongs(artists[0].uuid, 5)
-    results.songs = songs
+    const artist = artists[0]
+
+    // Step 2: Artist songs
+    const songs = await getArtistSongs(artist.uuid, 3)
+    results.step2_songs = {
+      count: songs.length,
+      first: songs[0] ?? null,
+      raw_shape: songs[0] ? Object.keys(songs[0]) : [],
+    }
 
     if (!songs[0]) {
-      return NextResponse.json({ error: 'No songs found', results })
+      return NextResponse.json({ success: false, error: 'No songs returned', results })
     }
 
-    // Step 3: Get metadata for first song
-    const metadata = await getSongMetadata(songs[0].uuid)
-    results.metadata = metadata
+    // Step 3: Try both credits endpoints for first song
+    const creditsRaw = await fetchRaw(`/api/v2/song/${songs[0].uuid}/credits`)
+    const metadataRaw = await fetchRaw(`/api/v2/song/${songs[0].uuid}/metadata`)
 
-    // Step 4: Check publisher for each writer with IPI
-    const writerChecks = []
-    if (metadata?.writers) {
-      for (const writer of metadata.writers.slice(0, 3)) {
-        if (writer.ipi) {
-          const publisher = await getPublisherByIPI(writer.ipi)
-          writerChecks.push({
-            writer: writer.name,
-            ipi: writer.ipi,
-            pro: writer.pro,
-            publisher: publisher?.name || null,
-            isLead: !publisher?.name,
-          })
-        }
-      }
+    results.step3_credits_endpoint = creditsRaw
+    results.step3_metadata_endpoint = metadataRaw
+
+    // Step 4: Use our normalised getSongDetail
+    const detail = await getSongDetail(songs[0].uuid)
+    const detailAny = detail as unknown as Record<string, unknown> | null
+    results.step4_song_detail = {
+      name: detail?.name ?? detail?.title ?? null,
+      writers_field: detailAny?.writers ?? null,
+      credits_field: detailAny?.credits ?? null,
+      contributors_field: detailAny?.contributors ?? null,
+      composers_field: detailAny?.composers ?? null,
+      all_keys: detail ? Object.keys(detail) : [],
     }
-    results.writerChecks = writerChecks
 
-    const leads = writerChecks.filter(w => w.isLead)
-    results.leadsFound = leads.length
-    results.summary = `Found ${leads.length} lead(s) on "${metadata?.name}" by ${artists[0].name}`
+    results.summary = artists[0]
+      ? `Connected OK — artist "${artists[0].name}" found, ${songs.length} song(s) fetched`
+      : 'Connected but artist search empty'
 
     return NextResponse.json({ success: true, results })
   } catch (error) {
