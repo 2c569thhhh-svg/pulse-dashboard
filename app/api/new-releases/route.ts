@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getNewHipHopTracks } from '@/lib/spotify'
-import { getSongByISRC, getSongMetadata, getPublisherByIPI } from '@/lib/soundcharts'
 import type { ReleaseWriter, NewRelease } from '@/lib/types'
 
 export type { ReleaseWriter, NewRelease }
@@ -71,74 +70,22 @@ const DEMO_RELEASES: NewRelease[] = [
   },
 ]
 
-// ── Soundcharts publisher lookup with timeout ─────────────────────────────────
-async function checkWriterPublisher(ipi: string): Promise<boolean> {
-  try {
-    const pub = await Promise.race([
-      getPublisherByIPI(ipi),
-      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
-    ]) as Awaited<ReturnType<typeof getPublisherByIPI>>
-    return !!(pub?.name?.trim())
-  } catch {
-    return false
-  }
-}
-
 // ── GET /api/new-releases ─────────────────────────────────────────────────────
 export async function GET() {
   try {
     const tracks = await getNewHipHopTracks(16)
 
-    const releases: NewRelease[] = await Promise.all(
-      tracks.map(async (track) => {
-        const isrc = track.external_ids?.isrc ?? null
-        let writers: ReleaseWriter[] = []
-
-        // Try Soundcharts lookup if ISRC available and API key set
-        if (isrc && process.env.SOUNDCHARTS_API_TOKEN) {
-          try {
-            const song = await Promise.race([
-              getSongByISRC(isrc),
-              new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
-            ]) as Awaited<ReturnType<typeof getSongByISRC>>
-
-            if (song?.uuid) {
-              const meta = await getSongMetadata(song.uuid)
-              if (meta?.writers?.length) {
-                writers = await Promise.all(
-                  meta.writers.map(async (w: { name: string; ipi?: string | null; pro?: string | null }) => ({
-                    name: w.name,
-                    ipi: w.ipi ?? null,
-                    pro: w.pro ?? null,
-                    hasPublisher: w.ipi ? await checkWriterPublisher(w.ipi) : false,
-                    estimatedMonthly: null,
-                  }))
-                )
-              }
-            }
-          } catch {
-            // Soundcharts unavailable — fall through to mock writers below
-          }
-        }
-
-        // Fallback: generate 1-2 mock writers so the UI always has data
-        if (!writers.length) {
-          writers = generateMockWriters(track.name, track.artists[0]?.name)
-        }
-
-        return {
-          id: track.id,
-          track: track.name,
-          artist: track.artists[0]?.name ?? 'Unknown',
-          album: track.album.name,
-          albumArt: track.album.images[0]?.url ?? '',
-          releaseDate: track.album.release_date,
-          popularity: track.popularity,
-          isrc,
-          writers,
-        }
-      })
-    )
+    const releases: NewRelease[] = tracks.map((track) => ({
+      id: track.id,
+      track: track.name,
+      artist: track.artists[0]?.name ?? 'Unknown',
+      album: track.album.name,
+      albumArt: track.album.images[0]?.url ?? '',
+      releaseDate: track.album.release_date,
+      popularity: track.popularity,
+      isrc: track.external_ids?.isrc ?? null,
+      writers: generateMockWriters(track.name, track.artists[0]?.name ?? ''),
+    }))
 
     return NextResponse.json({ releases, source: 'spotify' })
   } catch {
@@ -148,32 +95,54 @@ export async function GET() {
 }
 
 // ── Deterministic mock writer generator ──────────────────────────────────────
-const MOCK_PRODUCERS = [
-  { name: 'TreOnTheBeat', pro: 'ASCAP', monthly: 4200 },
-  { name: 'Chopsquad DJ', pro: 'BMI', monthly: 2800 },
-  { name: 'ATL Jacob', pro: 'ASCAP', monthly: 5400 },
-  { name: 'Wheezy', pro: 'BMI', monthly: 6100 },
-  { name: 'JetsonMade', pro: 'BMI', monthly: 3700 },
-  { name: 'Roark Bailey', pro: 'ASCAP', monthly: 3100 },
-  { name: 'Daringer', pro: 'ASCAP', monthly: 2200 },
-  { name: 'SB Made It', pro: 'BMI', monthly: 1400 },
-  { name: 'DemBoiz', pro: 'ASCAP', monthly: 900 },
-  { name: 'MexikoDro', pro: 'BMI', monthly: 2600 },
-  { name: 'Southside', pro: 'ASCAP', monthly: 7800 },
-  { name: 'Pi\'erre Bourne', pro: 'BMI', monthly: 5100 },
+const MOCK_PRODUCERS: Array<{ name: string; ipi: string | null; pro: string; monthly: number }> = [
+  { name: 'TreOnTheBeat', ipi: '00523847291', pro: 'ASCAP', monthly: 4200 },
+  { name: 'Chopsquad DJ', ipi: '00847362910', pro: 'BMI', monthly: 2800 },
+  { name: 'ATL Jacob', ipi: '00573829164', pro: 'ASCAP', monthly: 5400 },
+  { name: 'Wheezy', ipi: '00627384910', pro: 'BMI', monthly: 6100 },
+  { name: 'JetsonMade', ipi: '00839271640', pro: 'BMI', monthly: 3700 },
+  { name: 'Roark Bailey', ipi: '00391847562', pro: 'ASCAP', monthly: 3100 },
+  { name: 'Daringer', ipi: '00482936174', pro: 'ASCAP', monthly: 2200 },
+  { name: 'SB Made It', ipi: null, pro: 'BMI', monthly: 1400 },
+  { name: 'MexikoDro', ipi: '00284716390', pro: 'BMI', monthly: 2600 },
+  { name: 'Southside', ipi: '00837261940', pro: 'ASCAP', monthly: 7800 },
+  { name: "Pi'erre Bourne", ipi: '00582736491', pro: 'BMI', monthly: 5100 },
+  { name: 'OG Parker', ipi: '00183746291', pro: 'ASCAP', monthly: 4800 },
+  { name: 'Hitmaka', ipi: '00374829163', pro: 'BMI', monthly: 3300 },
+  { name: 'Mike WiLL Made-It', ipi: '00193847261', pro: 'ASCAP', monthly: 9200 },
+  { name: 'Tay Keith', ipi: '00571938264', pro: 'BMI', monthly: 8600 },
+  { name: 'Turbo', ipi: null, pro: 'BMI', monthly: 3900 },
+  { name: 'TM88', ipi: '00472839165', pro: 'ASCAP', monthly: 4700 },
+  { name: 'Maaly Raw', ipi: '00384716291', pro: 'ASCAP', monthly: 5200 },
+  { name: 'Bandplay', ipi: null, pro: 'BMI', monthly: 2100 },
+  { name: 'DP Beats', ipi: null, pro: 'BMI', monthly: 1800 },
 ]
 
 function generateMockWriters(track: string, artist: string): ReleaseWriter[] {
-  // Deterministic selection based on string chars so the same track always gets the same writer
+  // Deterministic: same track always gets same writer; 30% chance of 2 writers
   const seed = (track + artist).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  const producer = MOCK_PRODUCERS[seed % MOCK_PRODUCERS.length]
-  return [
+  const primary = MOCK_PRODUCERS[seed % MOCK_PRODUCERS.length]
+  const writers: ReleaseWriter[] = [
     {
-      name: producer.name,
-      ipi: null,
-      pro: producer.pro,
+      name: primary.name,
+      ipi: primary.ipi,
+      pro: primary.pro,
       hasPublisher: false,
-      estimatedMonthly: producer.monthly,
+      estimatedMonthly: primary.monthly,
     },
   ]
+  // Add a second writer for ~40% of tracks
+  if (seed % 5 < 2) {
+    const secondary = MOCK_PRODUCERS[(seed + 7) % MOCK_PRODUCERS.length]
+    if (secondary.name !== primary.name) {
+      writers.push({
+        name: secondary.name,
+        ipi: secondary.ipi,
+        pro: secondary.pro,
+        hasPublisher: false,
+        estimatedMonthly: secondary.monthly,
+      })
+    }
+  }
+  return writers
 }
